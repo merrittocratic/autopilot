@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Merrittocracy Autopilot — Post Approved Threads
+    Checks review queue every 5 minutes for approved threads and posts them.
+
+    Installation:
+      1. Copy this file to ~/Library/LaunchAgents/
+      2. Edit the ProgramArguments paths to match your machine
+      3. Load: launchctl load ~/Library/LaunchAgents/com.merrittocratic.autopilot.post.plist
+  -->
+
+  <key>Label</key>
+  <string>com.merrittocratic.autopilot.post</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/Rscript</string>
+    <string>/Users/steve/repos/autopilot/run_distribution.R</string>
+    <string>--post</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/steve/repos/autopilot</string>
+
+  <!-- Run every 300 seconds (5 minutes) -->
+  <key>StartInterval</key>
+  <integer>300</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/steve/repos/autopilot/logs/launchd_post_stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/steve/repos/autopilot/logs/launchd_post_stderr.log</string>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>LowPriorityIO</key>
+  <true/>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>R_LIBS_USER</key>
+    <string>/Users/steve/Library/R/arm64/4.4/library</string>
+  </dict>
+</dict>
+</plist>

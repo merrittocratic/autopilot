@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Merrittocracy Autopilot — RSS Feed Check
+    Polls Substack RSS every 15 minutes for new posts.
+
+    Installation:
+      1. Copy this file to ~/Library/LaunchAgents/
+      2. Edit the ProgramArguments paths to match your machine
+      3. Load: launchctl load ~/Library/LaunchAgents/com.merrittocratic.autopilot.check.plist
+      4. Verify: launchctl list | grep merrittocratic
+
+    Unload:
+      launchctl unload ~/Library/LaunchAgents/com.merrittocratic.autopilot.check.plist
+  -->
+
+  <key>Label</key>
+  <string>com.merrittocratic.autopilot.check</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- UPDATE THIS: path to your Rscript binary -->
+    <string>/usr/local/bin/Rscript</string>
+    <!-- UPDATE THIS: path to your autopilot repo -->
+    <string>/Users/steve/repos/autopilot/run_distribution.R</string>
+    <string>--check</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <!-- UPDATE THIS: path to your autopilot repo -->
+  <string>/Users/steve/repos/autopilot</string>
+
+  <!-- Run every 900 seconds (15 minutes) -->
+  <key>StartInterval</key>
+  <integer>900</integer>
+
+  <!-- Log stdout and stderr -->
+  <key>StandardOutPath</key>
+  <string>/Users/steve/repos/autopilot/logs/launchd_check_stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/steve/repos/autopilot/logs/launchd_check_stderr.log</string>
+
+  <!-- Keep the job loaded even if it fails -->
+  <key>KeepAlive</key>
+  <false/>
+
+  <!-- Don't run if on battery (Mac Mini is always plugged in, but just in case) -->
+  <key>LowPriorityIO</key>
+  <true/>
+
+  <!-- Environment variables — Rscript needs to know where R packages live -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- UPDATE THIS if your R library path differs -->
+    <key>R_LIBS_USER</key>
+    <string>/Users/steve/Library/R/arm64/4.4/library</string>
+  </dict>
+</dict>
+</plist>

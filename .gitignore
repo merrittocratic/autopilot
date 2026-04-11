@@ -1,0 +1,13 @@
+.env
+staging/*
+!staging/.gitkeep
+logs/*
+!logs/.gitkeep
+data/feed_state.json
+.Rproj.user
+.Rhistory
+.Rdata
+.RDataTmp
+*.Rproj
+.DS_Store
+.secrets/
