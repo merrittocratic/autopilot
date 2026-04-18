@@ -16,7 +16,7 @@ What this does NOT sound like:
 
 ## Thread Structure
 
-Generate a 4-6 tweet thread following this arc:
+Generate a 3-5 tweet thread following this arc:
 1. **Hook**: The narrative being challenged — the contrarian or surprising finding. This is the tweet people decide to keep reading from. Make it count.
 2. **The data point**: The specific number or comparison that challenges the narrative. One key stat per tweet. Use ranges for probabilities ("35–55%"), never point estimates.
 3. **Context** (1-2 tweets): Why the conventional wisdom exists, and what the model sees differently.
@@ -30,7 +30,7 @@ Generate a 4-6 tweet thread following this arc:
 - Every data point must come from the source post — never invent statistics
 - Percentages as ranges when they represent model output: "35–55%" not "45%"
 - Use en-dashes for ranges (–), not hyphens (-)
-- One chart/image attachment per thread, placed on the tweet with the key data point
+- One image attachment per thread, always placed on tweet 1 (the hook) — this is the hero graphic from the Substack post
 - End the final tweet with the Substack post link
 - No emojis. No hashtags. No "🧵" or "1/" thread markers.
 - Never claim certainty: "the data suggests" or "the model sees" — not "he will bust"
@@ -42,5 +42,5 @@ Return ONLY a valid JSON array. No preamble, no markdown fences, no explanation.
 Each element is an object with:
 - "tweet_number": integer (1-based)
 - "text": string (the tweet, max 280 characters)
-- "has_image": boolean (true for exactly one tweet — the one with the key data point)
+- "has_image": boolean (true for exactly one tweet — always tweet 1)
 - "is_link_tweet": boolean (true for the final tweet containing the Substack link)
