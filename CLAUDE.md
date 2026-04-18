@@ -89,13 +89,14 @@ looks like it might pull in employer context — stop and flag it.
 ---
 
 ## Known Issues / TODOs
-1. **Hero graphic attachment from `~/content/`.** README describes image
-   extraction from post HTML, but the user's workflow inserts images manually in
-   Substack UI — so RSS/HTML extraction may miss them. Canonical source is the
-   content repo at `~/content/graphics/`. Reference convention in published
-   markdown is `[IMAGE: filename.png]` (not standard markdown image syntax).
-   Phase 3 work: parse `[IMAGE: ...]` from the matched `published/` markdown
-   file and attach from `~/content/graphics/`. Do NOT build until Phase 2
+1. **Hero graphic attachment via `og:image`.** Current code extracts `<img>`
+   tags from RSS body content — this gets in-body data charts, not the cover
+   image. The canonical hero source is the `og:image` meta tag on the post page
+   (Substack always populates this from the cover image set in the editor UI).
+   Phase 3 work: in `02_extract_content.R`, add `fetch_hero_image()` that fetches
+   the post URL, parses `<meta property="og:image">`, downloads it, and returns
+   it as `image_paths[1]`. Cover image should be set correctly in Substack UI
+   before publishing — that's the upstream requirement. Do NOT build until Phase 2
    (thread drafting) is stable.
 2. **Phased posting posture.** Current: draft → Sheet → manual review →
    approved → auto-post to X. Future phases expand to inbound reply surfacing
