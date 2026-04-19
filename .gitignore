@@ -11,3 +11,4 @@ data/feed_state.json
 *.Rproj
 .DS_Store
 .secrets/
+.httr-oauth

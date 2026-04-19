@@ -1,5 +1,7 @@
 # ============================================================================
 # 05_post_to_x.R — Post approved threads to X via API v2
+# 2026-04-18: Fix OAuth — drop manual HMAC signing; use httr v1 Token1.0$new()
+#             which has battle-tested OAuth 1.0a support with pre-obtained tokens
 # ============================================================================
 # Reads approved threads from the review queue, posts them as reply chains,
 # and updates the queue with posted status and tweet IDs.
@@ -8,68 +10,71 @@
 source(here::here("R", "00_config.R"))
 source(here::here("R", "04_queue_write.R"))
 
-# --- OAuth 1.0a signature for X API v2 --------------------------------------
-# X API v2 posting requires OAuth 1.0a (user context) for tweet creation
+library(httr)  # v1 — used only here for OAuth 1.0a signing; httr2 has no equivalent
+
+# --- OAuth 1.0a token for X API ---------------------------------------------
+# X API v2 posting requires OAuth 1.0a (user context) for tweet creation.
+# httr::Token1.0$new() accepts pre-obtained access tokens directly — no browser
+# flow needed.
 
 build_x_auth <- function() {
-  # These four credentials come from the X Developer Portal app settings
-  api_key        <- get_x_api_key()
-  api_secret     <- get_x_api_secret()
-  access_token   <- get_x_access_token()
-  access_secret  <- get_x_access_secret()
+  api_key       <- get_x_api_key()
+  api_secret    <- get_x_api_secret()
+  access_token  <- get_x_access_token()
+  access_secret <- get_x_access_secret()
 
   if (any(c(api_key, api_secret, access_token, access_secret) == "")) {
     cli_abort("X API credentials incomplete. Check .env file.")
   }
 
-  # httr2 OAuth 1.0a signing
-  list(
-    api_key        = api_key,
-    api_secret     = api_secret,
-    access_token   = access_token,
-    access_secret  = access_secret
+  Token1.0$new(
+    endpoint = oauth_endpoint(
+      request   = "https://api.twitter.com/oauth/request_token",
+      authorize = "https://api.twitter.com/oauth/authenticate",
+      access    = "https://api.twitter.com/oauth/access_token"
+    ),
+    app = oauth_app("x", key = api_key, secret = api_secret),
+    params = list(as_header = TRUE),
+    credentials = list(
+      oauth_token        = access_token,
+      oauth_token_secret = access_secret
+    ),
+    private_key = NULL
   )
 }
 
 # --- Media upload (X API v1.1 — still required for images) -------------------
 
-upload_image_to_x <- function(image_path, auth) {
+upload_image_to_x <- function(image_path, token) {
   if (is.na(image_path) || !file.exists(image_path)) {
     return(NA_character_)
   }
 
   cli_alert_info("Uploading image: {basename(image_path)}")
 
-  # Media upload uses v1.1 endpoint with multipart form data
-  resp <- request("https://upload.twitter.com/1.1/media/upload.json") |>
-    req_oauth_auth_code(
-      client = oauth_client(
-        id     = auth$api_key,
-        secret = auth$api_secret,
-        token_url = "https://api.twitter.com/oauth/access_token",
-        name   = "merrittocracy-autopilot"
-      )
-    ) |>
-    req_body_multipart(
-      media_data = base64enc::base64encode(image_path)
-    ) |>
-    req_timeout(60) |>
-    req_error(is_error = \(resp) FALSE) |>
-    req_perform()
+  resp <- httr::POST(
+    "https://upload.twitter.com/1.1/media/upload.json",
+    config  = httr::config(token = token),
+    body    = list(media_data = base64enc::base64encode(image_path)),
+    encode  = "multipart",
+    timeout(60)
+  )
 
-  if (resp_status(resp) != 200) {
-    cli_alert_warning("Image upload failed ({resp_status(resp)})")
+  if (httr::status_code(resp) != 200) {
+    cli_alert_warning(
+      "Image upload failed ({httr::status_code(resp)}): {httr::content(resp, 'text', encoding = 'UTF-8')}"
+    )
     return(NA_character_)
   }
 
-  media_id <- resp_body_json(resp)$media_id_string
+  media_id <- httr::content(resp)$media_id_string
   cli_alert_success("Image uploaded: media_id={media_id}")
   media_id
 }
 
 # --- Tweet posting -----------------------------------------------------------
 
-post_tweet <- function(text, reply_to = NULL, media_ids = NULL, auth) {
+post_tweet <- function(text, reply_to = NULL, media_ids = NULL, token) {
   body <- list(text = text)
 
   if (!is.null(reply_to)) {
@@ -80,45 +85,33 @@ post_tweet <- function(text, reply_to = NULL, media_ids = NULL, auth) {
     body$media <- list(media_ids = as.list(media_ids))
   }
 
-  resp <- request("https://api.twitter.com/2/tweets") |>
-    req_headers(
-      "Content-Type" = "application/json"
-    ) |>
-    req_body_json(body) |>
-    req_oauth_auth_code(
-      client = oauth_client(
-        id     = auth$api_key,
-        secret = auth$api_secret,
-        token_url = "https://api.twitter.com/oauth/access_token",
-        name   = "merrittocracy-autopilot"
-      )
-    ) |>
-    req_timeout(30) |>
-    req_error(is_error = \(resp) FALSE) |>
-    req_perform()
+  resp <- httr::POST(
+    "https://api.twitter.com/2/tweets",
+    config      = httr::config(token = token),
+    body        = jsonlite::toJSON(body, auto_unbox = TRUE),
+    httr::add_headers("Content-Type" = "application/json"),
+    timeout(30)
+  )
 
-  if (resp_status(resp) != 201) {
-    body <- resp_body_json(resp)
-    cli_alert_danger("Tweet post failed ({resp_status(resp)}): {body$detail %||% 'unknown error'}")
+  if (httr::status_code(resp) != 201) {
+    err <- httr::content(resp, "text", encoding = "UTF-8")
+    cli_alert_danger("Tweet post failed ({httr::status_code(resp)}): {err}")
     return(NULL)
   }
 
-  result <- resp_body_json(resp)
-  tweet_id <- result$data$id
+  tweet_id <- httr::content(resp)$data$id
   cli_alert_success("Tweet posted: {tweet_id}")
   tweet_id
 }
 
 # --- Thread posting ----------------------------------------------------------
 
-post_thread <- function(thread_df, auth) {
+post_thread <- function(thread_df, token) {
   cli_h2("Posting thread: {thread_df$title[1]}")
-
-  # Sort by tweet number
 
   thread_df <- thread_df |> arrange(tweet_number)
 
-  reply_to <- NULL
+  reply_to   <- NULL
   posted_ids <- character(0)
 
   for (i in seq_len(nrow(thread_df))) {
@@ -128,7 +121,7 @@ post_thread <- function(thread_df, auth) {
     # Handle image attachment
     media_ids <- NULL
     if (row$has_image && !is.na(row$image_path)) {
-      media_id <- upload_image_to_x(row$image_path, auth)
+      media_id <- upload_image_to_x(row$image_path, token)
       if (!is.na(media_id)) {
         media_ids <- media_id
       }
@@ -141,7 +134,7 @@ post_thread <- function(thread_df, auth) {
       text      = tweet_text,
       reply_to  = reply_to,
       media_ids = media_ids,
-      auth      = auth
+      token     = token
     )
 
     if (is.null(tweet_id)) {
@@ -151,12 +144,11 @@ post_thread <- function(thread_df, auth) {
       break
     }
 
-    # Update queue status
     update_queue_status(row$post_id, row$tweet_number, "posted",
                         tweet_id = tweet_id)
 
     posted_ids <- c(posted_ids, tweet_id)
-    reply_to <- tweet_id  # next tweet replies to this one
+    reply_to   <- tweet_id  # next tweet replies to this one
 
     # Rate limit courtesy — 1 second between tweets
     if (i < nrow(thread_df)) Sys.sleep(1)
@@ -180,14 +172,14 @@ post_approved_threads <- function() {
     return(invisible(NULL))
   }
 
-  auth <- build_x_auth()
+  token <- build_x_auth()
 
   # Group by post_id and post each thread
   approved |>
     group_split(post_id) |>
     walk(\(thread_df) {
       tryCatch(
-        post_thread(thread_df, auth),
+        post_thread(thread_df, token),
         error = function(e) {
           cli_alert_danger("Failed to post thread: {e$message}")
           log_event("post_error", e$message,
