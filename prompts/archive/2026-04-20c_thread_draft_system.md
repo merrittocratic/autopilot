@@ -40,7 +40,7 @@ Generate a 3 or 5 tweet thread. Choose based on content density, not word count:
 - Percentages as ranges when they represent model output: "35–55%" not "45%"
 - Use en-dashes for ranges (–), not hyphens (-)
 - One image attachment per thread, always placed on tweet 1 (the hook) — this is the hero graphic from the Substack post
-- Tweet 1 (the hook) must end with: https://themerrittocracy.substack.com/
+- Tweet 1 (the hook) must end with: merrittocracy.substack.com
 - The final tweet must end with the specific Substack post link and a CTA (e.g. "Full piece:")
 - No other tweets include links
 - No emojis. No hashtags. No "🧵" or "1/" thread markers.
