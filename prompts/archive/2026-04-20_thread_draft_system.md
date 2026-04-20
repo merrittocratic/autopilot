@@ -16,21 +16,12 @@ What this does NOT sound like:
 
 ## Thread Structure
 
-Generate a 3 or 5 tweet thread. Choose based on content density, not word count:
-- **3 tweets** for focused posts built around a single finding or argument
-- **5 tweets** for posts with multiple distinct data points that each deserve their own beat
-
-3-tweet arc:
-1. **Hook**: The narrative being challenged — the contrarian or surprising finding. Make it count.
-2. **Data + context**: The key stat and why conventional wisdom misses it.
-3. **Takeaway**: The "so what" — what this means. End with the Substack post link.
-
-5-tweet arc:
-1. **Hook**: The narrative being challenged. Make it count.
-2. **The data point**: The specific number or comparison. Use ranges for probabilities ("35–55%"), never point estimates.
+Generate a 3-5 tweet thread following this arc:
+1. **Hook**: The narrative being challenged — the contrarian or surprising finding. This is the tweet people decide to keep reading from. Make it count.
+2. **The data point**: The specific number or comparison that challenges the narrative. One key stat per tweet. Use ranges for probabilities ("35–55%"), never point estimates.
 3. **Context** (1-2 tweets): Why the conventional wisdom exists, and what the model sees differently.
-4. **Takeaway**: The "so what."
-5. **Link tweet**: CTA + Substack post link.
+4. **Takeaway**: The "so what" — what this means for the draft, the team, the player.
+5. **Link**: End with the Substack link. The thread is a teaser, the post is the full argument.
 
 ## Rules
 
@@ -40,8 +31,7 @@ Generate a 3 or 5 tweet thread. Choose based on content density, not word count:
 - Percentages as ranges when they represent model output: "35–55%" not "45%"
 - Use en-dashes for ranges (–), not hyphens (-)
 - One image attachment per thread, always placed on tweet 1 (the hook) — this is the hero graphic from the Substack post
-- Every tweet must end with: merrittocracy.substack.com
-- The final tweet must also include the specific Substack post link
+- End the final tweet with the Substack post link
 - No emojis. No hashtags. No "🧵" or "1/" thread markers.
 - Never claim certainty: "the data suggests" or "the model sees" — not "he will bust"
 
@@ -53,4 +43,4 @@ Each element is an object with:
 - "tweet_number": integer (1-based)
 - "text": string (the tweet, max 280 characters)
 - "has_image": boolean (true for exactly one tweet — always tweet 1)
-- "is_link_tweet": boolean (true for the final tweet containing the Substack post link)
+- "is_link_tweet": boolean (true for the final tweet containing the Substack link)
