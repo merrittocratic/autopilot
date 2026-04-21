@@ -13,8 +13,7 @@ source(here::here("R", "00_config.R"))
 setup_review_sheet <- function(sheet_name = "Merrittocracy Autopilot Queue") {
   cli_h1("Setting up review queue sheet")
 
-  # Authenticate — this will open a browser for OAuth on first run
-  gs4_auth(scopes = "https://www.googleapis.com/auth/spreadsheets")
+  # Auth handled in 00_config.R via service account
 
   ss <- gs4_create(
     sheet_name,

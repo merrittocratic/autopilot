@@ -24,8 +24,7 @@ suppressPackageStartupMessages({
 
 load_env <- function(env_file = here::here(".env")) {
   if (!file.exists(env_file)) {
-    cli_alert_warning("No .env file found at {env_file}")
-    cli_alert_info("Copy .env.example to .env and fill in your keys")
+    # No .env file needed when secrets are injected via autopilot-env.sh
     return(invisible(FALSE))
   }
   lines <- readLines(env_file, warn = FALSE)
@@ -42,6 +41,18 @@ load_env <- function(env_file = here::here(".env")) {
   }
   cli_alert_success(".env loaded")
   invisible(TRUE)
+}
+
+# --- Google Sheets auth (service account) ------------------------------------
+
+GOOGLE_SA_KEY <- here::here(".secrets", "google-service-account.json")
+
+if (file.exists(GOOGLE_SA_KEY)) {
+  gs4_auth(path = GOOGLE_SA_KEY)
+  cli_alert_success("Google Sheets authenticated via service account")
+} else {
+  cli_alert_warning("Google service account key not found at {GOOGLE_SA_KEY}")
+  cli_alert_info("Google Sheets operations will fail")
 }
 
 # --- Constants ---------------------------------------------------------------
