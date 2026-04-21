@@ -18,22 +18,26 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/local/bin/Rscript</string>
-    <string>/Users/steve/repos/autopilot/run_distribution.R</string>
+    <string>/opt/homebrew/bin/op</string>
+    <string>run</string>
+    <string>--env-file=/Users/merrittocracyclaw/autopilot/.env.template</string>
+    <string>--</string>
+    <string>/opt/homebrew/bin/Rscript</string>
+    <string>/Users/merrittocracyclaw/autopilot/run_distribution.R</string>
     <string>--post</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <string>/Users/steve/repos/autopilot</string>
+  <string>/Users/merrittocracyclaw/autopilot</string>
 
   <!-- Run every 300 seconds (5 minutes) -->
   <key>StartInterval</key>
   <integer>300</integer>
 
   <key>StandardOutPath</key>
-  <string>/Users/steve/repos/autopilot/logs/launchd_post_stdout.log</string>
+  <string>/Users/merrittocracyclaw/autopilot/logs/launchd_post_stdout.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/steve/repos/autopilot/logs/launchd_post_stderr.log</string>
+  <string>/Users/merrittocracyclaw/autopilot/logs/launchd_post_stderr.log</string>
 
   <key>KeepAlive</key>
   <false/>
@@ -44,7 +48,7 @@
   <key>EnvironmentVariables</key>
   <dict>
     <key>R_LIBS_USER</key>
-    <string>/Users/steve/Library/R/arm64/4.4/library</string>
+    <string>/opt/homebrew/lib/R/4.5/site-library</string>
   </dict>
 </dict>
 </plist>

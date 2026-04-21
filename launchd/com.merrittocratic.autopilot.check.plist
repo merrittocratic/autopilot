@@ -22,16 +22,13 @@
 
   <key>ProgramArguments</key>
   <array>
-    <!-- UPDATE THIS: path to your Rscript binary -->
-    <string>/usr/local/bin/Rscript</string>
-    <!-- UPDATE THIS: path to your autopilot repo -->
-    <string>/Users/steve/repos/autopilot/run_distribution.R</string>
+    <string>/opt/homebrew/bin/Rscript</string>
+    <string>/Users/merrittocracyclaw/autopilot/run_distribution.R</string>
     <string>--check</string>
   </array>
 
   <key>WorkingDirectory</key>
-  <!-- UPDATE THIS: path to your autopilot repo -->
-  <string>/Users/steve/repos/autopilot</string>
+  <string>/Users/merrittocracyclaw/autopilot</string>
 
   <!-- Run every 900 seconds (15 minutes) -->
   <key>StartInterval</key>
@@ -39,9 +36,9 @@
 
   <!-- Log stdout and stderr -->
   <key>StandardOutPath</key>
-  <string>/Users/steve/repos/autopilot/logs/launchd_check_stdout.log</string>
+  <string>/Users/merrittocracyclaw/autopilot/logs/launchd_check_stdout.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/steve/repos/autopilot/logs/launchd_check_stderr.log</string>
+  <string>/Users/merrittocracyclaw/autopilot/logs/launchd_check_stderr.log</string>
 
   <!-- Keep the job loaded even if it fails -->
   <key>KeepAlive</key>
@@ -54,9 +51,8 @@
   <!-- Environment variables — Rscript needs to know where R packages live -->
   <key>EnvironmentVariables</key>
   <dict>
-    <!-- UPDATE THIS if your R library path differs -->
     <key>R_LIBS_USER</key>
-    <string>/Users/steve/Library/R/arm64/4.4/library</string>
+    <string>/opt/homebrew/lib/R/4.5/site-library</string>
   </dict>
 </dict>
 </plist>
