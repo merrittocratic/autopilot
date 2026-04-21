@@ -6,15 +6,12 @@
   <!--
     Merrittocracy Autopilot — RSS Feed Check
     Polls Substack RSS every 15 minutes for new posts.
+    Secrets loaded from macOS Keychain via autopilot-env.sh.
 
     Installation:
       1. Copy this file to ~/Library/LaunchAgents/
-      2. Edit the ProgramArguments paths to match your machine
-      3. Load: launchctl load ~/Library/LaunchAgents/com.merrittocratic.autopilot.check.plist
-      4. Verify: launchctl list | grep merrittocratic
-
-    Unload:
-      launchctl unload ~/Library/LaunchAgents/com.merrittocratic.autopilot.check.plist
+      2. Load: launchctl load ~/Library/LaunchAgents/com.merrittocratic.autopilot.check.plist
+      3. Verify: launchctl list | grep merrittocratic
   -->
 
   <key>Label</key>
@@ -22,6 +19,7 @@
 
   <key>ProgramArguments</key>
   <array>
+    <string>/Users/merrittocracyclaw/autopilot/scripts/autopilot-env.sh</string>
     <string>/opt/homebrew/bin/Rscript</string>
     <string>/Users/merrittocracyclaw/autopilot/run_distribution.R</string>
     <string>--check</string>
@@ -40,19 +38,10 @@
   <key>StandardErrorPath</key>
   <string>/Users/merrittocracyclaw/autopilot/logs/launchd_check_stderr.log</string>
 
-  <!-- Keep the job loaded even if it fails -->
   <key>KeepAlive</key>
   <false/>
 
-  <!-- Don't run if on battery (Mac Mini is always plugged in, but just in case) -->
   <key>LowPriorityIO</key>
   <true/>
-
-  <!-- Environment variables — Rscript needs to know where R packages live -->
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>R_LIBS_USER</key>
-    <string>/opt/homebrew/lib/R/4.5/site-library</string>
-  </dict>
 </dict>
 </plist>

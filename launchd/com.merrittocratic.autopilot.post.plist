@@ -6,11 +6,11 @@
   <!--
     Merrittocracy Autopilot — Post Approved Threads
     Checks review queue every 5 minutes for approved threads and posts them.
+    Secrets loaded from macOS Keychain via autopilot-env.sh.
 
     Installation:
       1. Copy this file to ~/Library/LaunchAgents/
-      2. Edit the ProgramArguments paths to match your machine
-      3. Load: launchctl load ~/Library/LaunchAgents/com.merrittocratic.autopilot.post.plist
+      2. Load: launchctl load ~/Library/LaunchAgents/com.merrittocratic.autopilot.post.plist
   -->
 
   <key>Label</key>
@@ -18,10 +18,7 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/op</string>
-    <string>run</string>
-    <string>--env-file=/Users/merrittocracyclaw/autopilot/.env.template</string>
-    <string>--</string>
+    <string>/Users/merrittocracyclaw/autopilot/scripts/autopilot-env.sh</string>
     <string>/opt/homebrew/bin/Rscript</string>
     <string>/Users/merrittocracyclaw/autopilot/run_distribution.R</string>
     <string>--post</string>
@@ -44,11 +41,5 @@
 
   <key>LowPriorityIO</key>
   <true/>
-
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>R_LIBS_USER</key>
-    <string>/opt/homebrew/lib/R/4.5/site-library</string>
-  </dict>
 </dict>
 </plist>
