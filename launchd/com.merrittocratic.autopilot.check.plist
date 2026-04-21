@@ -28,9 +28,9 @@
   <key>WorkingDirectory</key>
   <string>/Users/merrittocracyclaw/autopilot</string>
 
-  <!-- Run every 900 seconds (15 minutes) -->
+  <!-- Run every 1800 seconds (30 minutes) -->
   <key>StartInterval</key>
-  <integer>900</integer>
+  <integer>1800</integer>
 
   <!-- Log stdout and stderr -->
   <key>StandardOutPath</key>
