@@ -4,6 +4,8 @@ staging/*
 logs/*
 !logs/.gitkeep
 data/feed_state.json
+*service-account*.json
+merrittocracy-autopilot-*.json
 .Rproj.user
 .Rhistory
 .Rdata
