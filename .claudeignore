@@ -1,0 +1,29 @@
+# Claude Code context exclusions
+# Keeps large/generated/sensitive files out of Claude's context window
+
+# Data files — large binaries and generated outputs
+data/
+staging/
+logs/
+
+# Secrets — never load these
+.secrets/
+.env
+.httr-oauth
+
+# R environment artifacts
+.Rproj.user/
+.Rhistory
+.RData
+*.RDataTmp
+
+# Images
+staging/images/
+R/images/
+
+# LaunchAgent plists — rarely need editing
+launchd/
+
+# Node modules / package locks (if any)
+node_modules/
+package-lock.json
