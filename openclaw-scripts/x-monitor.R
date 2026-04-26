@@ -88,6 +88,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("jeremiyah love", "2026 nfl draft", "running back", "top 5 pick", "new york giants", "todd mcshay", "offensive weapon", "draft evaluation", "position labeling", "nfl front offices", "draft analysis", "mock draft", "passing game", "player valuation", "draft strategy"),
     summary = "NFL analysts avoid calling elite players 'running backs,' using euphemisms to justify top-5 picks like Jeremiyah Love."
   )
+,
+  list(
+    slug = "what-makes-a-consensus-elite-player",
+    keywords = c("caleb downs", "2026 nfl draft", "safety position", "draft capital", "jeremiyah love", "sonny styles", "kyle hamilton", "positional value", "first-round picks", "daniel jeremiah", "surplus value", "draft analytics", "prospect evaluation", "running back", "linebacker"),
+    summary = "Elite safety prospect Caleb Downs faces draft slide despite top talent due to NFL's undervaluation of the safety position."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
@@ -397,9 +403,19 @@ if (length(candidates) > 0) {
   order_idx <- order(-scores, -impressions)
   candidates <- candidates[order_idx]
   
-  # Cap at (MAX_REPLIES_PER_DAY - already replied today)
+  # Split into engaged (API-ready) and cold (manual) candidates
+  engaged_candidates <- candidates[map_lgl(candidates, ~ .x$can_reply_via_api)]
+  cold_candidates    <- candidates[map_lgl(candidates, ~ !.x$can_reply_via_api)]
+
+  # Cap API-ready replies at daily limit
   remaining <- MAX_REPLIES_PER_DAY - state$daily_reply_count
-  candidates <- candidates[seq_len(min(length(candidates), remaining))]
+  engaged_candidates <- engaged_candidates[seq_len(min(length(engaged_candidates), remaining))]
+
+  # Always surface up to 3 cold candidates so Steve can reply manually
+  cold_candidates <- cold_candidates[seq_len(min(length(cold_candidates), 3))]
+
+  # Recombine: engaged first (API), then cold (manual)
+  candidates <- c(engaged_candidates, cold_candidates)
 }
 
 # Update seen tweets
