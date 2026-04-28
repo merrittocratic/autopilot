@@ -287,7 +287,9 @@ score_tweet <- function(tweet_text, model_data = NULL) {
                                   "jackson", "white", "harris", "martin",
                                   "allen", "young", "king", "wright",
                                   "scott", "green", "baker", "hill",
-                                  "love", "woods", "cooper", "parker"))
+                                  "love", "woods", "cooper", "parker",
+                                  "boston", "washington", "houston", "phoenix",
+                                  "chicago", "denver", "dallas", "miami"))
       for (i in seq_len(nrow(key_prospects))) {
         last_name <- key_prospects$last_name[i]
         if (str_detect(text_lower, fixed(last_name))) {
