@@ -52,9 +52,10 @@ ARTICLE_TOPICS <- list(
   ),
   list(
     slug = "are-we-being-konned",
-    keywords = c("konnor griffin", "griffin", "mississippi state", "transfer",
-                 "quarterback evaluation"),
-    summary = "Examining whether Griffin hype is justified by the data."
+    keywords = c("cooper flagg", "flagg", "kon knueppel", "knueppel",
+                 "rookie of the year", "rookie award", "nba rookie",
+                 "dallas mavericks", "charlotte hornets", "mavericks rookie"),
+    summary = "Cooper Flagg robbed 80-20 by ESPN voters for ROY. Knueppel won on volume/team wins but Flagg's per-game alpha, degree of difficulty, and ceiling make it a bad take."
   ),
   list(
     slug = "ty-simpson-really",
