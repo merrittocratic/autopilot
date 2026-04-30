@@ -106,6 +106,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("nfl draft", "ai automation", "openclaw", "earnest", "boom/bust probabilities", "draft prediction model", "human in the loop", "x-posts", "substack", "themerrittocracy", "ai agent", "draft analysis", "mac mini", "claude by anthropic", "soul.md"),
     summary = "TheMerrittocracy introduces Earnest, an AI automation agent that amplifies content reach while maintaining editorial control through human approval loops."
   )
+,
+  list(
+    slug = "the-tax-man-cometh",
+    keywords = c("cleveland cavaliers", "donovan mitchell", "evan mobley", "james harden", "toronto raptors", "scottie barnes", "darius garland", "superteam tax", "trade deadline", "playoff performance", "regular season vs playoffs", "first-round series", "roster flexibility", "harden playoff performance", "2026 nba playoffs"),
+    summary = "Cleveland's superteam struggles in playoffs despite trading assets for James Harden, exposing the cost of roster flexibility."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
