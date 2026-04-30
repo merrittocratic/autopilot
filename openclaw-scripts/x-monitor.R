@@ -100,6 +100,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("2026 nfl draft", "sports analytics", "machine learning models", "homebrew", "open-source tools", "automation agent", "data pipeline", "position-specific models", "themerrittocracy", "draft analysis", "analytics operation", "software development", "content engine", "model building", "draft predictions"),
     summary = "TheMerrittocracy built a sports analytics operation in one month using open-source tools and ML models for 2026 NFL Draft coverage."
   )
+,
+  list(
+    slug = "earnest-goes-to-the-draft",
+    keywords = c("nfl draft", "ai automation", "openclaw", "earnest", "boom/bust probabilities", "draft prediction model", "human in the loop", "x-posts", "substack", "themerrittocracy", "ai agent", "draft analysis", "mac mini", "claude by anthropic", "soul.md"),
+    summary = "TheMerrittocracy introduces Earnest, an AI automation agent that amplifies content reach while maintaining editorial control through human approval loops."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
