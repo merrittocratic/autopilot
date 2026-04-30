@@ -52,10 +52,9 @@ ARTICLE_TOPICS <- list(
   ),
   list(
     slug = "are-we-being-konned",
-    keywords = c("cooper flagg", "flagg", "kon knueppel", "knueppel",
-                 "rookie of the year", "rookie award", "nba rookie",
-                 "dallas mavericks", "charlotte hornets", "mavericks rookie"),
-    summary = "Cooper Flagg robbed 80-20 by ESPN voters for ROY. Knueppel won on volume/team wins but Flagg's per-game alpha, degree of difficulty, and ceiling make it a bad take."
+    keywords = c("konnor griffin", "griffin", "mississippi state", "transfer",
+                 "quarterback evaluation"),
+    summary = "Examining whether Griffin hype is justified by the data."
   ),
   list(
     slug = "ty-simpson-really",
@@ -94,6 +93,12 @@ ARTICLE_TOPICS <- list(
     slug = "what-makes-a-consensus-elite-player",
     keywords = c("caleb downs", "2026 nfl draft", "safety position", "draft capital", "jeremiyah love", "sonny styles", "kyle hamilton", "positional value", "first-round picks", "daniel jeremiah", "surplus value", "draft analytics", "prospect evaluation", "running back", "linebacker"),
     summary = "Elite safety prospect Caleb Downs faces draft slide despite top talent due to NFL's undervaluation of the safety position."
+  )
+,
+  list(
+    slug = "pour-one-out-for-my-homies",
+    keywords = c("2026 nfl draft", "sports analytics", "machine learning models", "homebrew", "open-source tools", "automation agent", "data pipeline", "position-specific models", "themerrittocracy", "draft analysis", "analytics operation", "software development", "content engine", "model building", "draft predictions"),
+    summary = "TheMerrittocracy built a sports analytics operation in one month using open-source tools and ML models for 2026 NFL Draft coverage."
   )
 )
 
@@ -287,9 +292,7 @@ score_tweet <- function(tweet_text, model_data = NULL) {
                                   "jackson", "white", "harris", "martin",
                                   "allen", "young", "king", "wright",
                                   "scott", "green", "baker", "hill",
-                                  "love", "woods", "cooper", "parker",
-                                  "boston", "washington", "houston", "phoenix",
-                                  "chicago", "denver", "dallas", "miami"))
+                                  "love", "woods", "cooper", "parker"))
       for (i in seq_len(nrow(key_prospects))) {
         last_name <- key_prospects$last_name[i]
         if (str_detect(text_lower, fixed(last_name))) {
