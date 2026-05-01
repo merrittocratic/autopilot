@@ -111,6 +111,36 @@ ARTICLE_TOPICS <- list(
     slug = "the-tax-man-cometh",
     keywords = c("cleveland cavaliers", "donovan mitchell", "evan mobley", "james harden", "toronto raptors", "scottie barnes", "darius garland", "superteam tax", "trade deadline", "playoff performance", "regular season vs playoffs", "first-round series", "roster flexibility", "harden playoff performance", "2026 nba playoffs"),
     summary = "Cleveland's superteam struggles in playoffs despite trading assets for James Harden, exposing the cost of roster flexibility."
+  ),
+  list(
+    slug = "nba-playoffs-general",
+    keywords = c(
+      # General playoff terms
+      "nba playoffs", "playoff basketball", "nba postseason", "first round",
+      "second round", "conference semifinals", "conference finals", "nba finals",
+      "series lead", "series tied", "elimination game", "closeout game",
+      # West teams / players
+      "oklahoma city thunder", "shai gilgeous-alexander", "sga",
+      "denver nuggets", "nikola jokic", "jamal murray",
+      "golden state warriors", "stephen curry", "steph curry",
+      "memphis grizzlies", "ja morant",
+      "houston rockets", "alperen sengun",
+      "dallas mavericks", "kyrie irving",
+      "minnesota timberwolves", "anthony edwards", "ant edwards",
+      "los angeles clippers",
+      # East teams / players
+      "boston celtics", "jayson tatum", "jaylen brown",
+      "new york knicks", "jalen brunson", "karl-anthony towns", "towns",
+      "indiana pacers", "tyrese haliburton", "haliburton",
+      "miami heat", "jimmy butler",
+      "milwaukee bucks", "giannis", "giannis antetokounmpo",
+      "orlando magic",
+      # Storylines
+      "home court advantage", "game 7", "sweep", "bench depth",
+      "playoff seeding", "rest advantage", "load management playoffs",
+      "nba analytics", "playoff rotation", "clutch time"
+    ),
+    summary = "General NBA playoffs 2026 coverage — team storylines, series results, and analytical takes across the full bracket."
   )
 )
 
