@@ -337,7 +337,7 @@ score_tweet <- function(tweet_text, model_data = NULL) {
                                   "love", "woods", "cooper", "parker"))
       for (i in seq_len(nrow(key_prospects))) {
         last_name <- key_prospects$last_name[i]
-        if (str_detect(text_lower, fixed(last_name))) {
+        if (str_detect(text_lower, regex(paste0("\\b", last_name, "\\b")))) {
           prospect_match <- TRUE
           matched_prospect <- key_prospects[i, ] |> select(-last_name)
           best_score <- best_score + 2
