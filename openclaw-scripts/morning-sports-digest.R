@@ -141,8 +141,9 @@ fetch_user_tweets_yesterday <- function(user_id, username, token) {
     tweet_utc <- as.POSIXct(ts_clean, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
     tweet_et  <- with_tz(tweet_utc, "America/New_York")
     hour_et   <- as.integer(format(tweet_et, "%H"))
-    # Prime time = 6pm–2am ET (live game coverage window)
-    prime_time <- hour_et >= 18 || hour_et < 2
+    # Prime time = 9pm–2am ET (games wrapping up, live results window)
+    # 6pm-9pm catches too much prior-day reaction/recap content
+    prime_time <- hour_et >= 21 || hour_et < 2
     list(
       id         = .x$id,
       text       = .x$text,
@@ -171,8 +172,9 @@ classify_sport <- function(text) {
 
 format_tweet_bundle <- function(tweets) {
   map_chr(tweets, function(tw) {
-    time_tag <- if (isTRUE(tw$prime_time)) "[PRIME]" else "[DAY]"
-    glue("{time_tag} [{tw$source}] {tw$text}")
+    time_tag    <- if (isTRUE(tw$prime_time)) "[PRIME]" else "[DAY]"
+    engagement  <- tw$likes + tw$retweets
+    glue("{time_tag}[{tw$hour_et}h ET][eng:{engagement}] [{tw$source}] {tw$text}")
   }) |> paste(collapse = "\n\n")
 }
 
@@ -189,17 +191,19 @@ call_claude <- function(tweet_bundle, date_label) {
     "   - NFL: notable trades, signings, releases, transactions\n",
     "   - Golf: leaderboard, round results, or tournament news\n",
     "2. IMPORTANT — Tweet timing context:\n",
-    "   - Tweets are tagged [PRIME] (posted 6pm-2am ET, live game coverage) or [DAY] (daytime, likely prior-day analysis)\n",
+    "   - Tweets are tagged [PRIME][Xh ET] (posted 9pm-2am ET, games wrapping up) or [DAY][Xh ET] (prior-day analysis/reaction)\n",
     "   - PRIORITIZE [PRIME] tweets for game results and the Star of the Night pick\n",
     "   - [DAY] tweets are background context only — do NOT use them to pick the Star\n",
     "   - If a player only appears in [DAY] tweets, they are NOT eligible for Star of the Night\n",
+    "   - A player mentioned heavily at 6-8pm ET is likely yesterday's story, not last night's — ignore for Star\n",
     "3. Identify the STAR OF THE NIGHT using this logic:\n",
-    "   - Only consider players mentioned in [PRIME] tweets\n",
-    "   - Count cross-feed mentions (ESPN accounts + Bleacher Report) among [PRIME] tweets only\n",
-    "   - The player mentioned most across feeds in prime time wins\n",
-    "   - If it's a tie, use performance quality to break the tie\n",
-    "   - If no [PRIME] tweets mention a clear standout, say 'No clear star — quiet prime time' \n",
-    "   - Include a one-sentence reason explaining the pick\n",
+    "   - Only consider players mentioned in [PRIME] tweets (9pm-2am ET)\n",
+    "   - USE ENGAGEMENT (likes + retweets) as the primary signal, NOT mention count\n",
+    "   - Find the highest-engagement [PRIME] tweets and identify the player they feature\n",
+    "   - A game-winner, big performance, or clutch moment will generate far more engagement than analysis pieces\n",
+    "   - Cross-feed agreement is a tiebreaker, not the primary criteria\n",
+    "   - If no [PRIME] tweets exist, say 'No clear star — quiet prime time'\n",
+    "   - Include a one-sentence reason with their stat line or key moment\n",
     "3. Format rules:\n",
     "   - Use emoji section headers: 🏀 NBA, 🏈 NFL, ⛳ Golf, ⭐ Star of the Night\n",
     "   - Keep each sport section to 2-4 bullet points max\n",
