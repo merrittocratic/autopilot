@@ -44,6 +44,9 @@ SECRETS=(
 export REVIEW_SHEET_ID="1-AP273mLlwwmf2sWSE32a7D6ZQzT2J2zwjPdVTnCjSw"
 export R_LIBS_USER="/opt/homebrew/lib/R/4.5/site-library"
 
+# Fallback env file — used by cron when login keychain is locked
+FALLBACK_ENV="$HOME/.autopilot.env"
+
 # Read each secret from Keychain and export
 FAILED=()
 for SECRET in "${SECRETS[@]}"; do
@@ -55,7 +58,24 @@ for SECRET in "${SECRETS[@]}"; do
   fi
 done
 
-# Report any missing secrets to stderr (shows up in launchd logs)
+# If any secrets missing from Keychain, try the fallback .env file
+if [ ${#FAILED[@]} -gt 0 ]; then
+  if [ -f "$FALLBACK_ENV" ]; then
+    echo "[autopilot-env] Keychain locked — loading from $FALLBACK_ENV" >&2
+    # shellcheck source=/dev/null
+    source "$FALLBACK_ENV"
+    # Re-check which are still missing after fallback
+    STILL_FAILED=()
+    for SECRET in "${FAILED[@]}"; do
+      if [ -z "${!SECRET:-}" ]; then
+        STILL_FAILED+=("$SECRET")
+      fi
+    done
+    FAILED=("${STILL_FAILED[@]}")
+  fi
+fi
+
+# Report any secrets still missing
 if [ ${#FAILED[@]} -gt 0 ]; then
   echo "[autopilot-env] WARNING: Missing Keychain secrets: ${FAILED[*]}" >&2
 fi
