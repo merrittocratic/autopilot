@@ -113,6 +113,16 @@ ARTICLE_TOPICS <- list(
     summary = "Cleveland's superteam struggles in playoffs despite trading assets for James Harden, exposing the cost of roster flexibility."
   ),
   list(
+    slug = "can-coaches-be-clutch",
+    keywords = c("nick nurse", "nurse", "sixers coach", "philadelphia 76ers", "joel embiid", "tyrese maxey",
+                 "coach of the year", "playoff coaching", "coaching adjustment", "box and one",
+                 "steve kerr", "mark daigneault", "playoff premium", "coaching record",
+                 "regular season vs playoffs", "nba coaching", "clutch coaching",
+                 "gregg popovich", "doc rivers", "tom thibodeau", "nba coach",
+                 "game 7", "sixers celtics", "sixers knicks", "playoff adjustments"),
+    summary = "Data-driven look at whether coaches actually matter in the playoffs — Nick Nurse as the case study, using COY win% above/below the regular season line."
+  ),
+  list(
     slug = "nba-playoffs-general",
     keywords = c(
       # General playoff terms

@@ -80,7 +80,7 @@ parse_feed_items <- function(feed_xml) {
     ))
   ) |>
     mutate(
-      pub_date = parse_date_time(pub_date, orders = "a, d b Y H:M:S z"),
+      pub_date = as.POSIXct(strptime(sub(" GMT$", "", pub_date), "%a, %d %b %Y %H:%M:%S"), tz = "GMT"),
       # Use guid as the unique post ID — stable across title edits
       post_id = str_extract(guid, "[^/]+$") |> coalesce(guid)
     )
