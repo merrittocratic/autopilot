@@ -344,7 +344,12 @@ score_tweet <- function(tweet_text, model_data = NULL) {
                                   "jackson", "white", "harris", "martin",
                                   "allen", "young", "king", "wright",
                                   "scott", "green", "baker", "hill",
-                                  "love", "woods", "cooper", "parker"))
+                                  "love", "woods", "cooper", "parker",
+                                  # NBA/NFL city & team name false positives
+                                  "boston", "houston", "dallas", "denver",
+                                  "memphis", "indiana", "orlando", "miami",
+                                  "phoenix", "portland", "charlotte", "cleveland",
+                                  "brooklyn", "golden", "sacramento", "oklahoma"))
       for (i in seq_len(nrow(key_prospects))) {
         last_name <- key_prospects$last_name[i]
         if (str_detect(text_lower, regex(paste0("\\b", last_name, "\\b")))) {
