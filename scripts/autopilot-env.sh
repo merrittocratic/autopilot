@@ -71,7 +71,7 @@ if [ ${#FAILED[@]} -gt 0 ]; then
         STILL_FAILED+=("$SECRET")
       fi
     done
-    FAILED=("${STILL_FAILED[@]}")
+    FAILED=("${STILL_FAILED[@]+${STILL_FAILED[@]}}")
   fi
 fi
 
