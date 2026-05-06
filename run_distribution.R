@@ -72,6 +72,13 @@ if (mode == "--check") {
         mark_processed(post$post_id)
 
         cli_alert_success("Post queued for review: {post$title}")
+
+        # Notify Steve on Telegram
+        notify_telegram(glue(
+          "\U0001F4DD *New article drafted:* {post$title}\n",
+          "Tweet thread ({nrow(thread)} tweets) is in the queue, ready for your review.",
+          "\n\nReply with the tweet numbers you want to post (e.g. \"post 1 and 5\")."
+        ))
       } else {
         cli_alert_danger("Thread drafting failed for: {post$title}")
         log_event("draft_error", "Thread drafting failed",

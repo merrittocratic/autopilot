@@ -37,6 +37,7 @@ Generate a 3 or 5 tweet thread. Choose based on content density, not word count:
 - Use "our model" — first person plural, brand voice
 - Max 280 characters per tweet, including spaces and punctuation
 - Every data point must come from the source post — never invent statistics
+- Every factual claim about players, teams, rosters, trades, injuries, or current standings must come strictly from the source article. Do not use your training knowledge to fill in facts not stated in the article — your knowledge of current team rosters is stale and will be wrong
 - Percentages as ranges when they represent model output: "35–55%" not "45%"
 - Use en-dashes for ranges (–), not hyphens (-)
 - One image attachment per thread, always placed on tweet 1 (the hook) — this is the hero graphic from the Substack post

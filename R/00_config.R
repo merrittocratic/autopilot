@@ -120,6 +120,38 @@ ensure_dirs <- function() {
   })
 }
 
+# --- Telegram notification --------------------------------------------------
+
+notify_telegram <- function(message, chat_id = "8676616323") {
+  bot_token <- Sys.getenv("TELEGRAM_BOT_TOKEN", unset = "")
+  if (bot_token == "") {
+    cli_alert_warning("TELEGRAM_BOT_TOKEN not set — skipping notification")
+    return(invisible(NULL))
+  }
+
+  resp <- tryCatch(
+    request(glue("https://api.telegram.org/bot{bot_token}/sendMessage")) |>
+      req_body_json(list(
+        chat_id    = chat_id,
+        text       = message,
+        parse_mode = "Markdown"
+      )) |>
+      req_perform(),
+    error = function(e) {
+      cli_alert_warning("Telegram notification failed: {e$message}")
+      NULL
+    }
+  )
+
+  if (!is.null(resp) && resp_status(resp) == 200) {
+    cli_alert_success("Telegram notification sent")
+  } else if (!is.null(resp)) {
+    cli_alert_warning("Telegram notification failed (HTTP {resp_status(resp)})")
+  }
+
+  invisible(resp)
+}
+
 # --- Logging helper ----------------------------------------------------------
 
 log_event <- function(event_type, message, details = list()) {
