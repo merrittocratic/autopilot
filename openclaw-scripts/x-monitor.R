@@ -152,6 +152,12 @@ ARTICLE_TOPICS <- list(
     ),
     summary = "General NBA playoffs 2026 coverage — team storylines, series results, and analytical takes across the full bracket."
   )
+,
+  list(
+    slug = "holding-out-for-a-hero",
+    keywords = c("anthony edwards", "luka dončić", "minnesota timberwolves", "san antonio spurs", "los angeles lakers", "oklahoma city thunder", "victor wembanyama", "donte divincenzo", "playoffs 2026", "injury return", "game 1", "hamstring injury", "torn achilles", "home court advantage", "playoff narrative"),
+    summary = "Star injuries shape playoff narratives differently: Edwards' return energizes Wolves while Dončić's absence leaves Lakers outclassed."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
