@@ -73,6 +73,26 @@ if (mode == "--check") {
 
         cli_alert_success("Post queued for review: {post$title}")
 
+        # Auto-update x-monitor.R keywords for this article
+        article_url  <- post$post_id
+        article_slug <- sub(".*/p/", "", article_url)
+        keyword_script <- path.expand(
+          "~/autopilot/openclaw-scripts/update-monitor-keywords.sh"
+        )
+        if (file.exists(keyword_script)) {
+          cli_alert_info("Updating x-monitor keywords for: {article_slug}")
+          kw_result <- system2(
+            "bash",
+            args = c(shQuote(keyword_script),
+                     shQuote(article_url),
+                     shQuote(article_slug)),
+            stdout = TRUE, stderr = TRUE
+          )
+          cli_alert_success("Keyword update: {paste(kw_result, collapse = ' | ')}")
+        } else {
+          cli_alert_warning("update-monitor-keywords.sh not found — skipping keyword update")
+        }
+
         # Notify Steve on Telegram
         notify_telegram(glue(
           "\U0001F4DD *New article drafted:* {post$title}\n",
