@@ -109,7 +109,7 @@ ARTICLE_TOPICS <- list(
 ,
   list(
     slug = "the-tax-man-cometh",
-    keywords = c("cleveland cavaliers", "donovan mitchell", "evan mobley", "james harden", "toronto raptors", "scottie barnes", "darius garland", "superteam tax", "trade deadline", "playoff performance", "regular season vs playoffs", "first-round series", "roster flexibility", "harden playoff performance", "2026 nba playoffs"),
+    keywords = c("cleveland cavaliers", "donovan mitchell", "evan mobley", "james harden", "toronto raptors", "scottie barnes", "darius garland", "superteam tax", "trade deadline", "playoff performance", "regular season vs playoffs", "first-round series", "roster flexibility", "harden playoff performance", "2026 nba playoffs", "detroit pistons", "pistons", "cade cunningham"),
     summary = "Cleveland's superteam struggles in playoffs despite trading assets for James Harden, exposing the cost of roster flexibility."
   ),
   list(
@@ -153,6 +153,24 @@ ARTICLE_TOPICS <- list(
     summary = "General NBA playoffs 2026 coverage — team storylines, series results, and analytical takes across the full bracket."
   )
 ,
+  list(
+    slug = "dont-call-it-a-comeback",
+    keywords = c(
+      # Pistons–Cavs series
+      "detroit pistons", "pistons", "cleveland cavaliers", "cavs",
+      "donovan mitchell", "evan mobley", "cade cunningham",
+      # Knicks–Sixers series / sweep
+      "philadelphia 76ers", "76ers", "sixers", "new york knicks",
+      "jalen brunson", "joel embiid", "embiid", "sweep",
+      # Seeding / 3-1 comeback narrative
+      "3-1 deficit", "3-1 comeback", "7-seed", "1-seed", "seeding",
+      "regression to the mean", "additive effects",
+      # Round 2 framing
+      "round 2", "second round", "conference semifinals",
+      "3-0 series lead", "series lead"
+    ),
+    summary = "Detroit (1-seed) and Philly (7-seed) both came back from 3-1 deficits in Round 1, but seed tells the real story: Pistons up 2-0 on Cavs, Knicks up 3-0 on Sixers. Two independent risk factors compound."
+  ),
   list(
     slug = "holding-out-for-a-hero",
     keywords = c("anthony edwards", "luka dončić", "minnesota timberwolves", "san antonio spurs", "los angeles lakers", "oklahoma city thunder", "victor wembanyama", "donte divincenzo", "playoffs 2026", "injury return", "game 1", "hamstring injury", "torn achilles", "home court advantage", "playoff narrative"),
