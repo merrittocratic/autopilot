@@ -74,8 +74,9 @@ if (mode == "--check") {
         cli_alert_success("Post queued for review: {post$title}")
 
         # Auto-update x-monitor.R keywords for this article
-        article_url  <- post$post_id
-        article_slug <- sub(".*/p/", "", article_url)
+        # post$post_id is a slug (e.g. "my-article"), not a full URL — build it
+        article_slug <- post$post_id
+        article_url  <- paste0("https://themerrittocracy.substack.com/p/", article_slug)
         keyword_script <- path.expand(
           "~/autopilot/openclaw-scripts/update-monitor-keywords.sh"
         )
