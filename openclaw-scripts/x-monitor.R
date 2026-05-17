@@ -176,6 +176,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("anthony edwards", "luka dončić", "minnesota timberwolves", "san antonio spurs", "los angeles lakers", "oklahoma city thunder", "victor wembanyama", "donte divincenzo", "playoffs 2026", "injury return", "game 1", "hamstring injury", "torn achilles", "home court advantage", "playoff narrative"),
     summary = "Star injuries shape playoff narratives differently: Edwards' return energizes Wolves while Dončić's absence leaves Lakers outclassed."
   )
+,
+  list(
+    slug = "you-cant-escape-your-past",
+    keywords = c("kristoffer reitan", "u.s. open shinnecock hills", "pga championship aronimink", "golf predictive model", "form residual", "skill prior", "cameron young", "truist", "recent form vs historical baseline", "player ranking", "golf analytics", "model accuracy", "signature event", "form decay", "tournament prediction"),
+    summary = "A golf prediction model struggles when recent hot form contradicts a player's poor historical baseline."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
