@@ -182,6 +182,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("kristoffer reitan", "u.s. open shinnecock hills", "pga championship aronimink", "golf predictive model", "form residual", "skill prior", "cameron young", "truist", "recent form vs historical baseline", "player ranking", "golf analytics", "model accuracy", "signature event", "form decay", "tournament prediction"),
     summary = "A golf prediction model struggles when recent hot form contradicts a player's poor historical baseline."
   )
+,
+  list(
+    slug = "donald-ross-might-have-won-friday",
+    keywords = c("pga championship", "aronimink", "scottie scheffler", "rory mcilroy", "maverick mcnealy", "alex smalley", "ludvig aberg", "tyrrell hatton", "donald ross course", "strokes gained", "hot hand form", "missed the cut", "ball-strikers", "friday pin placements", "moving day"),
+    summary = "Donald Ross course design and brutal Friday conditions at PGA Championship upset favorites and elevated unlikely leaders."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
