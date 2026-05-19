@@ -188,6 +188,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("pga championship", "aronimink", "scottie scheffler", "rory mcilroy", "maverick mcnealy", "alex smalley", "ludvig aberg", "tyrrell hatton", "donald ross course", "strokes gained", "hot hand form", "missed the cut", "ball-strikers", "friday pin placements", "moving day"),
     summary = "Donald Ross course design and brutal Friday conditions at PGA Championship upset favorites and elevated unlikely leaders."
   )
+,
+  list(
+    slug = "the-struggle-was-real",
+    keywords = c("scottie scheffler", "rory mcilroy", "alex smalley", "aaron rai", "pga major championship", "aronimink", "strokes gained", "predictive model", "t2 finish", "form residual", "skill prior", "2027 masters", "leaderboard", "sunday collapse", "golf analytics"),
+    summary = "Predictive model correctly identified contenders like Alex Smalley at major despite limitations in ranking Sunday leaders."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
