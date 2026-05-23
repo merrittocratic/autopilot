@@ -200,6 +200,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("victor wembanyama", "de'aaron fox", "san antonio spurs", "western conference finals", "okc thunder", "shai gilgeous-alexander", "stephon castle", "per-36 stats", "playoff scoring", "running mate", "co-star role", "kareem abdul-jabbar", "oscar robertson", "michael jordan", "championship contention"),
     summary = "Wembanyama struggles to carry Spurs alone without a reliable co-star, proving elite wings need defined running mates to win titles."
   )
+,
+  list(
+    slug = "i-dont-do-sidekicks-test-only",
+    keywords = c("victor wembanyama", "de'aaron fox", "san antonio spurs", "western conference finals", "okc thunder", "shai gilgeous-alexander", "stephon castle", "per-36 minutes", "playoff scoring", "running mate", "co-star role", "kareem abdul-jabbar", "championship contention", "playoff performance", "elite two-way player"),
+    summary = "Wembanyama's playoff scoring drops per-36 minutes, highlighting the Spurs' need for a reliable co-star to contend."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
