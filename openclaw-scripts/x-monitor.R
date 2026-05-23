@@ -219,6 +219,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("victor wembanyama", "san antonio spurs", "nba playoffs 2026", "generational big man", "lew alcindor", "kareem abdul-jabbar", "milwaukee bucks", "oscar robertson", "de'aaron fox", "60-win team", "year three", "nba finals", "postseason awards", "playoff narrative", "championship contender"),
     summary = "Victor Wembanyama's young Spurs team parallels Kareem's 1969-70 Bucks run, but lacks the co-star supporting cast."
   )
+,
+  list(
+    slug = "there-will-never-be-another-tiger",
+    keywords = c("tiger woods", "rory mcilroy", "earl woods", "kultida woods", "next tiger", "masters", "green jacket", "psychological conditioning", "golf legacy", "36-hole lead", "augusta", "scottie scheffler", "jordan spieth", "sports parenting", "golf goat"),
+    summary = "Tiger Woods was uniquely shaped by intentional psychological conditioning from his father Earl, making him irreplaceable rather than a benchmark."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
