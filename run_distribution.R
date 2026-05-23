@@ -89,9 +89,21 @@ if (mode == "--check") {
                      shQuote(article_slug)),
             stdout = TRUE, stderr = TRUE
           )
-          cli_alert_success("Keyword update: {paste(kw_result, collapse = ' | ')}")
+          kw_exit <- attr(kw_result, "status")
+          if (is.null(kw_exit) || kw_exit == 0) {
+            cli_alert_success("Keyword update OK: {paste(kw_result, collapse = ' | ')}")
+            log_event("keyword_update", "x-monitor keywords updated",
+                      list(post_id = article_slug, output = paste(kw_result, collapse = " | ")))
+          } else {
+            cli_alert_warning("Keyword update failed (exit {kw_exit}): {paste(kw_result, collapse = ' | ')}")
+            log_event("keyword_update_error", "x-monitor keyword update failed",
+                      list(post_id = article_slug, exit_code = kw_exit,
+                           output = paste(kw_result, collapse = " | ")))
+          }
         } else {
           cli_alert_warning("update-monitor-keywords.sh not found — skipping keyword update")
+          log_event("keyword_update_error", "update-monitor-keywords.sh not found",
+                    list(post_id = article_slug))
         }
 
         # Notify Steve on Telegram
