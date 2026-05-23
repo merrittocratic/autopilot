@@ -213,6 +213,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("interior defensive line", "idl", "pass rush", "edge rushers", "front seven", "aaron donald", "ndamukong suh", "haloti ngata", "fletcher cox", "jeffery simmons", "chris jones", "boom/bust differential", "nfl draft", "defensive tackle", "first-round picks"),
     summary = "Interior defensive line is the safest premium bet in the front seven with a +10.9% boom/bust differential."
   )
+,
+  list(
+    slug = "there-can-be-only-one-precedent",
+    keywords = c("victor wembanyama", "san antonio spurs", "nba playoffs 2026", "generational big man", "lew alcindor", "kareem abdul-jabbar", "milwaukee bucks", "oscar robertson", "de'aaron fox", "60-win team", "year three", "nba finals", "postseason awards", "playoff narrative", "championship contender"),
+    summary = "Victor Wembanyama's young Spurs team parallels Kareem's 1969-70 Bucks run, but lacks the co-star supporting cast."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
