@@ -194,6 +194,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("scottie scheffler", "rory mcilroy", "alex smalley", "aaron rai", "pga major championship", "aronimink", "strokes gained", "predictive model", "t2 finish", "form residual", "skill prior", "2027 masters", "leaderboard", "sunday collapse", "golf analytics"),
     summary = "Predictive model correctly identified contenders like Alex Smalley at major despite limitations in ranking Sunday leaders."
   )
+,
+  list(
+    slug = "i-dont-do-sidekicks-im-a-solo-act",
+    keywords = c("victor wembanyama", "de'aaron fox", "san antonio spurs", "western conference finals", "okc thunder", "shai gilgeous-alexander", "stephon castle", "per-36 stats", "playoff scoring", "running mate", "co-star role", "kareem abdul-jabbar", "oscar robertson", "michael jordan", "championship contention"),
+    summary = "Wembanyama struggles to carry Spurs alone without a reliable co-star, proving elite wings need defined running mates to win titles."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
