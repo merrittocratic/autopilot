@@ -207,6 +207,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("nfl draft", "sports narratives", "draft analysis", "mock drafts", "face of the league", "tiger woods", "masters", "consensus opinion", "sports analytics", "draft evaluation", "accountability", "sports media", "boom/bust probability model", "draft class", "conventional wisdom"),
     summary = "Sports media narratives lack accountability; TheMerrittocracy uses data to fact-check consensus opinions starting with NFL Draft analysis."
   )
+,
+  list(
+    slug = "the-not-so-magnificent-seven",
+    keywords = c("interior defensive line", "idl", "pass rush", "edge rushers", "front seven", "aaron donald", "ndamukong suh", "haloti ngata", "fletcher cox", "jeffery simmons", "chris jones", "boom/bust differential", "nfl draft", "defensive tackle", "first-round picks"),
+    summary = "Interior defensive line is the safest premium bet in the front seven with a +10.9% boom/bust differential."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
