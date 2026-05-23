@@ -73,40 +73,8 @@ if (mode == "--check") {
 
         cli_alert_success("Post queued for review: {post$title}")
 
-        # Auto-update x-monitor.R keywords for this article
-        # post$post_id is a slug (e.g. "my-article"), not a full URL — build it
-        article_slug <- post$post_id
-        article_url  <- paste0("https://themerrittocracy.substack.com/p/", article_slug)
-        keyword_script <- path.expand(
-          "~/autopilot/openclaw-scripts/update-monitor-keywords.sh"
-        )
-        if (file.exists(keyword_script)) {
-          cli_alert_info("Updating x-monitor keywords for: {article_slug}")
-          kw_result <- system2(
-            "bash",
-            args = c(shQuote(keyword_script),
-                     shQuote(article_url),
-                     shQuote(article_slug)),
-            stdout = TRUE, stderr = TRUE
-          )
-          kw_exit <- attr(kw_result, "status")
-          if (is.null(kw_exit) || kw_exit == 0) {
-            cli_alert_success("Keyword update OK: {paste(kw_result, collapse = ' | ')}")
-            log_event("keyword_update", "x-monitor keywords updated",
-                      list(post_id = article_slug, output = paste(kw_result, collapse = " | ")))
-          } else {
-            cli_alert_warning("Keyword update failed (exit {kw_exit}): {paste(kw_result, collapse = ' | ')}")
-            log_event("keyword_update_error", "x-monitor keyword update failed",
-                      list(post_id = article_slug, exit_code = kw_exit,
-                           output = paste(kw_result, collapse = " | ")))
-          }
-        } else {
-          cli_alert_warning("update-monitor-keywords.sh not found — skipping keyword update")
-          log_event("keyword_update_error", "update-monitor-keywords.sh not found",
-                    list(post_id = article_slug))
-        }
-
         # Notify Steve on Telegram
+        # Note: x-monitor.R keywords are synced separately by keyword-sync.sh (daily at 6:15am)
         notify_telegram(glue(
           "\U0001F4DD *New article drafted:* {post$title}\n",
           "Tweet thread ({nrow(thread)} tweets) is in the queue, ready for your review.",
