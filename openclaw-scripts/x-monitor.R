@@ -201,6 +201,12 @@ ARTICLE_TOPICS <- list(
     summary = "Wembanyama struggles to carry Spurs alone without a reliable co-star, proving elite wings need defined running mates to win titles."
   )
 
+,
+  list(
+    slug = "sports-narratives-are-broken-the",
+    keywords = c("nfl draft", "sports narratives", "draft analysis", "mock drafts", "face of the league", "tiger woods", "masters", "consensus opinion", "sports analytics", "draft evaluation", "accountability", "sports media", "boom/bust probability model", "draft class", "conventional wisdom"),
+    summary = "Sports media narratives lack accountability; TheMerrittocracy uses data to fact-check consensus opinions starting with NFL Draft analysis."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
