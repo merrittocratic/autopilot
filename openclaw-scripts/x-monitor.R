@@ -225,6 +225,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("tiger woods", "rory mcilroy", "earl woods", "kultida woods", "next tiger", "masters", "green jacket", "psychological conditioning", "golf legacy", "36-hole lead", "augusta", "scottie scheffler", "jordan spieth", "sports parenting", "golf goat"),
     summary = "Tiger Woods was uniquely shaped by intentional psychological conditioning from his father Earl, making him irreplaceable rather than a benchmark."
   )
+,
+  list(
+    slug = "dream-the-impossible-dream",
+    keywords = c("oklahoma city thunder", "new york knicks", "nba finals", "chet holmgren", "shai gilgeous-alexander", "jalen williams", "karl-anthony towns", "jude brunson", "san antonio spurs", "madison square garden", "2026 nba finals", "okc vs nyk", "regular season matchup", "defending champions", "ajay mitchell"),
+    summary = "OKC's 2-0 regular season sweep over NY provides blueprint for potential Finals matchup despite injury concerns."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
