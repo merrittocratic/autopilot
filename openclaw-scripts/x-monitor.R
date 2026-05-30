@@ -231,6 +231,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("oklahoma city thunder", "new york knicks", "nba finals", "chet holmgren", "shai gilgeous-alexander", "jalen williams", "karl-anthony towns", "jude brunson", "san antonio spurs", "madison square garden", "2026 nba finals", "okc vs nyk", "regular season matchup", "defending champions", "ajay mitchell"),
     summary = "OKC's 2-0 regular season sweep over NY provides blueprint for potential Finals matchup despite injury concerns."
   )
+,
+  list(
+    slug = "you-had-one-job-just-the-one",
+    keywords = c("karl-anthony towns", "kat", "new york knicks", "san antonio spurs", "nba finals", "dylan harper", "mike brown", "jalen brunson", "foul trouble", "playmaking", "conference finals", "screening offense", "half-court spacing", "3.8 fouls per game", "nba cup final"),
+    summary = "KAT's foul trouble against San Antonio's screening-heavy defense is the key variable determining if the Knicks can reach the Finals."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
