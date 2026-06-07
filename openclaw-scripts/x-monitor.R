@@ -237,6 +237,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("karl-anthony towns", "kat", "new york knicks", "san antonio spurs", "nba finals", "dylan harper", "mike brown", "jalen brunson", "foul trouble", "playmaking", "conference finals", "screening offense", "half-court spacing", "3.8 fouls per game", "nba cup final"),
     summary = "KAT's foul trouble against San Antonio's screening-heavy defense is the key variable determining if the Knicks can reach the Finals."
   )
+,
+  list(
+    slug = "the-opposite",
+    keywords = c("knicks", "spurs", "kat", "karl-anthony towns", "jalen brunson", "dejounte castle", "wembanyama", "nba finals", "2-0 series lead", "assists trend", "foul trouble", "plus/minus", "defensive strategy", "playoff trends", "point-of-attack defense"),
+    summary = "Knicks defy preseason trend predictions to lead Finals 2-0 behind KAT's physical defense and Brunson's clutch plays."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
