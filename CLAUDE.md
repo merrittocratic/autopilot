@@ -69,6 +69,28 @@ GitHub is version control, not an automation trigger. launchd on Mac Mini is
 the scheduler. Do NOT propose GitHub Actions, webhooks, or CI-based triggers
 for the posting flow.
 
+### Single Source of Truth: openclaw-scripts/
+All OpenClaw agent-side scripts live canonically in `~/autopilot/openclaw-scripts/`.
+The previous `~/.openclaw/workspace/scripts/` mirror was deprecated in commit
+`1b4fff3` (Bundle #1, 2026-06-13). Do NOT propose restoring the mirror, copy-back
+sync patterns, or any architecture that creates two source-of-truth copies of
+the same script.
+
+### Earnest Owns Telegram Bot I/O
+The Telegram bot (`merrittocracybot`) is owned by OpenClaw on the Mac Mini.
+Autopilot scripts do NOT call the Telegram bot API with `reply_markup` /
+inline_keyboard messages, and do NOT poll `getUpdates`. Earnest handles all
+Telegram I/O (sends, callback reception, ACKs) via OpenClaw's routing layer
+and pipes JSON to log-only scripts (`x-surfacing-log.sh`, `x-feedback-log.sh`).
+The Bundle #3 fix (commit `a0c0bd7`, 2026-06-13) established this contract.
+See OpenClaw-Ops `journal/2026-W24.md` for the full architecture.
+
+### Cron-Only on the Mac Mini
+All recurring work on the Mac Mini runs via `openclaw cron` jobs. There is no
+heartbeat loop or persistent listener. Do NOT propose heartbeat-style checks,
+long-poll listeners, or any persistent process for scheduled work. See
+"Heartbeat Architecture Deprecated" entry in OpenClaw-Ops `journal/2026-W24.md`.
+
 ---
 
 ## Credentials and Secrets
@@ -145,6 +167,13 @@ third variation.
 - Build hero graphic attachment before Phase 2 is stable
 - Suggest switching to Python — R is the stack, googlesheets4/httr2/rvest cover
   everything needed
+- Call the Telegram bot API directly from autopilot scripts with `reply_markup` /
+  inline_keyboard — Earnest (via OpenClaw) owns bot I/O. Scripts persist JSONL
+  logs only.
+- Propose heartbeat-style listeners or persistent polling on the Mac Mini — all
+  recurring work runs via `openclaw cron`.
+- Restore the `~/.openclaw/workspace/scripts/` mirror or any copy-back sync
+  pattern — single source of truth is `~/autopilot/openclaw-scripts/`.
 - Silently change any locked-in decision above
 
 ---
