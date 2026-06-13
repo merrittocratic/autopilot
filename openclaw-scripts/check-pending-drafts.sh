@@ -1,7 +1,7 @@
 #!/bin/bash
-# Check Google Sheet queue for pending drafts
-# Called by Earnest during heartbeat checks
-# Returns JSON with pending drafts or empty array
+# Check Google Sheet queue for pending drafts.
+# Called by an OpenClaw cron job on the Mac Mini.
+# Returns JSON with pending drafts or empty array.
 
 cd ~/autopilot
 

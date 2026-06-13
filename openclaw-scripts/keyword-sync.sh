@@ -17,7 +17,8 @@ set -euo pipefail
 
 AUTOPILOT_DIR="$HOME/autopilot"
 FEED_STATE="$AUTOPILOT_DIR/data/feed_state.json"
-MONITOR_SCRIPT="$HOME/.openclaw/workspace/scripts/x-monitor.R"
+# 2026-06-13 — single source of truth: autopilot/openclaw-scripts/x-monitor.R
+MONITOR_SCRIPT="$AUTOPILOT_DIR/openclaw-scripts/x-monitor.R"
 UPDATE_SCRIPT="$AUTOPILOT_DIR/openclaw-scripts/update-monitor-keywords.sh"
 LOG_DIR="$AUTOPILOT_DIR/logs"
 LOG_FILE="$LOG_DIR/$(date +%Y-%m-%d)_autopilot.log"

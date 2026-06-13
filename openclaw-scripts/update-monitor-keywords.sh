@@ -11,7 +11,8 @@ set -e
 
 ARTICLE_URL="$1"
 ARTICLE_SLUG="$2"
-MONITOR_SCRIPT="$HOME/.openclaw/workspace/scripts/x-monitor.R"
+# 2026-06-13 — single source of truth: edit autopilot canonical directly.
+MONITOR_SCRIPT="$HOME/autopilot/openclaw-scripts/x-monitor.R"
 TMPDIR_WORK=$(mktemp -d)
 trap "rm -rf $TMPDIR_WORK" EXIT
 
@@ -154,26 +155,18 @@ with open(monitor_script, "w") as f:
 print(f"✅ Added '{slug}' to x-monitor.R")
 PYEOF
 
-# --- Sync back to autopilot repo and commit ----------------------------------
+# --- Commit and push the keyword update --------------------------------------
+# Single-source-of-truth: we edited the autopilot canonical directly above,
+# so no cp step needed — just commit and push.
 AUTOPILOT_DIR="$HOME/autopilot"
-OCLAW_SCRIPTS_DIR="$AUTOPILOT_DIR/openclaw-scripts"
+cd "$AUTOPILOT_DIR"
+git add openclaw-scripts/x-monitor.R
 
-if [ -d "$OCLAW_SCRIPTS_DIR" ]; then
-  echo "Syncing x-monitor.R to autopilot repo..." >&2
-  cp "$MONITOR_SCRIPT" "$OCLAW_SCRIPTS_DIR/x-monitor.R"
-
-  cd "$AUTOPILOT_DIR"
-  git add openclaw-scripts/x-monitor.R
-
-  # Only commit if there's actually a change
-  if ! git diff --cached --quiet; then
-    bash scripts/autopilot-env.sh git commit -m "auto: update x-monitor.R keywords for article '$ARTICLE_SLUG'" 2>&1 | grep -E 'main|error' >&2
-    bash scripts/autopilot-env.sh git pull --rebase 2>&1 | tail -1 >&2
-    bash scripts/autopilot-env.sh git push 2>&1 | grep -E 'To https|error' >&2
-    echo "✅ Synced and pushed to autopilot repo" >&2
-  else
-    echo "✓ No diff — autopilot repo already up to date" >&2
-  fi
+if ! git diff --cached --quiet; then
+  bash scripts/autopilot-env.sh git commit -m "auto: update x-monitor.R keywords for article '$ARTICLE_SLUG'" 2>&1 | grep -E 'main|error' >&2
+  bash scripts/autopilot-env.sh git pull --rebase 2>&1 | tail -1 >&2
+  bash scripts/autopilot-env.sh git push 2>&1 | grep -E 'To https|error' >&2
+  echo "[update-monitor-keywords] pushed to autopilot repo" >&2
 else
-  echo "⚠️  autopilot/openclaw-scripts not found — skipping sync" >&2
+  echo "[update-monitor-keywords] no diff -- autopilot repo already up to date" >&2
 fi

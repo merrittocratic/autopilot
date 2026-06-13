@@ -21,12 +21,59 @@ suppressPackageStartupMessages({
 })
 
 # --- Config ------------------------------------------------------------------
+# 2026-06-13 — Path migration to single source of truth in autopilot/.
+# 2026-06-13 — Tier-aware scoring + draft style routing.
+#
+# Paths are derived from $HOME so the same code works on the Mac Mini
+# (merrittocracyclaw) and Steve's laptop (stephenmerritt) for testing.
 
-MONITOR_LIST <- "/Users/merrittocracyclaw/.openclaw/workspace/x-monitor-list.md"
-ENGAGED_LIST <- "/Users/merrittocracyclaw/.openclaw/workspace/x-engaged-accounts.md"
-STATE_FILE <- "/Users/merrittocracyclaw/.openclaw/workspace/memory/x-monitor-state.json"
-MODEL_DATA <- "/Users/merrittocracyclaw/nfl-draft-model/data/05_scored_2026.rds"
-MAX_REPLIES_PER_DAY <- 3
+HOME_DIR     <- Sys.getenv("HOME")
+AUTOPILOT    <- file.path(HOME_DIR, "autopilot")
+MONITOR_LIST <- file.path(AUTOPILOT, "openclaw-scripts", "x-monitor-list.md")
+ENGAGED_LIST <- file.path(AUTOPILOT, "openclaw-scripts", "x-engaged-accounts.md")
+PROMPTS_DIR  <- file.path(AUTOPILOT, "prompts")
+
+# Runtime state stays outside the repo (state files are not git-tracked).
+STATE_FILE <- file.path(HOME_DIR, ".openclaw", "workspace", "memory", "x-monitor-state.json")
+MODEL_DATA <- file.path(HOME_DIR, "nfl-draft-model", "data", "05_scored_2026.rds")
+
+# Daily caps
+MAX_REPLIES_PER_DAY    <- 3   # API-eligible replies (engaged accounts only)
+MAX_CANDIDATES_PER_DAY <- 8   # total surfacings across all tiers per day
+
+# Tier-specific thresholds. The min_score is the keyword-match floor;
+# velocity_override is an engagement-per-minute threshold that surfaces
+# a tweet regardless of keyword match (catches "this is taking off"
+# moments where reply timing matters more than topical overlap).
+TIER_CONFIG <- list(
+  "1A" = list(
+    min_score         = 0,    # no keyword floor — substantiveness gates instead
+    max_age_hours     = 2,
+    velocity_override = 50,
+    draft_style       = "tier_1a"
+  ),
+  "1B" = list(
+    min_score         = 1,
+    max_age_hours     = 4,
+    velocity_override = 100,
+    draft_style       = "tier_1b"
+  ),
+  "1C" = list(
+    min_score         = 0,    # gated by analytical-hook check, not keywords
+    max_age_hours     = 2,
+    velocity_override = 200,  # tier-1C accounts are huge; high velocity bar
+    draft_style       = "tier_1c"
+  ),
+  "2"  = list(
+    min_score         = 2,    # current behavior preserved
+    max_age_hours     = 12,
+    velocity_override = Inf,  # no velocity override for tier-2
+    draft_style       = "tier_2"
+  )
+)
+
+# Cowherd-specific handles get the Cowherd prompt template instead of default 1A.
+COWHERD_HANDLES <- c("colincowherd", "theherd")
 
 # Articles we've published (topics we can speak to with authority)
 ARTICLE_TOPICS <- list(
@@ -282,19 +329,21 @@ build_token <- function() {
 read_state <- function() {
   if (!file.exists(STATE_FILE)) {
     return(list(
-      replied_today = list(),
-      last_scan = NULL,
-      seen_tweet_ids = character(0),
-      daily_reply_count = 0,
-      day = as.character(Sys.Date())
+      replied_today          = list(),
+      last_scan              = NULL,
+      seen_tweet_ids         = character(0),
+      daily_reply_count      = 0,
+      daily_candidate_count  = 0,
+      day                    = as.character(Sys.Date())
     ))
   }
   state <- fromJSON(STATE_FILE, simplifyVector = FALSE)
-  # Reset daily count if new day
+  # Reset daily counters on a new day
   if (is.null(state$day) || state$day != as.character(Sys.Date())) {
-    state$daily_reply_count <- 0
-    state$replied_today <- list()
-    state$day <- as.character(Sys.Date())
+    state$daily_reply_count     <- 0
+    state$daily_candidate_count <- 0
+    state$replied_today         <- list()
+    state$day                   <- as.character(Sys.Date())
   }
   state
 }
@@ -305,13 +354,26 @@ write_state <- function(state) {
 }
 
 # --- Parse monitor list ------------------------------------------------------
+# Returns a data.frame with columns: handle (no @ prefix, original case),
+# handle_lower (for matching), and tier ("1A", "1B", "1C", or "2").
+# Default tier is "2" for any handle without a [tier:X] annotation.
 
-parse_monitor_list <- function() {
+parse_monitor_list_with_tiers <- function() {
   lines <- readLines(MONITOR_LIST, warn = FALSE)
-  handles <- str_extract(lines, "@[A-Za-z0-9_]+")
-  handles <- handles[!is.na(handles)]
-  # Remove the @ prefix
-  str_remove(handles, "^@")
+  has_handle <- str_detect(lines, "@[A-Za-z0-9_]+")
+  lines <- lines[has_handle]
+
+  handles <- str_remove(str_extract(lines, "@[A-Za-z0-9_]+"), "^@")
+  tiers   <- str_match(lines, "\\[tier:([0-9A-Za-z]+)\\]")[, 2]
+  tiers[is.na(tiers)] <- "2"
+  tiers <- toupper(tiers)
+
+  data.frame(
+    handle       = handles,
+    handle_lower = str_to_lower(handles),
+    tier         = tiers,
+    stringsAsFactors = FALSE
+  )
 }
 
 # --- Parse engaged accounts list ---------------------------------------------
@@ -392,57 +454,117 @@ fetch_user_tweets <- function(user_id, username, token, since_hours = 3) {
   ))
 }
 
-# --- Relevance scoring -------------------------------------------------------
+# --- Tweet heuristics --------------------------------------------------------
 
-score_tweet <- function(tweet_text, model_data = NULL) {
-  text_lower <- str_to_lower(tweet_text)
-  
-  # Hard skip: race/politics
-  if (any(str_detect(text_lower, SKIP_KEYWORDS))) {
-    return(list(score = -1, matched_article = NULL, reason = "skip_topic"))
+# A tweet is "substantive" if it's long enough to have a real take in it
+# OR contains a stat/number/question. Filters out "good morning",
+# brand promo, schedule announcements, and similar throwaways.
+is_substantive <- function(text) {
+  if (nchar(text) < 60) return(FALSE)
+  has_number   <- str_detect(text, "\\d")
+  has_question <- str_detect(text, "\\?")
+  nchar(text) > 140 || has_number || has_question
+}
+
+# Minutes elapsed since the tweet was posted. X API returns ISO-8601
+# timestamps, sometimes with milliseconds — strip those before parsing.
+minutes_since <- function(created_at) {
+  ts_clean <- sub("\\.\\d+Z$", "Z", created_at)
+  ts_utc   <- as.POSIXct(ts_clean, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+  as.numeric(difftime(Sys.time(), ts_utc, units = "mins"))
+}
+
+# Engagement velocity: likes+retweets per minute since posting. Used as
+# a "this is taking off" override — surfaces hot tweets even when the
+# keyword score is below threshold.
+compute_engagement_velocity <- function(likes, retweets, minutes_old) {
+  total <- (likes %||% 0) + (retweets %||% 0)
+  total / max(minutes_old, 1)
+}
+
+# Which prompt template should Earnest use to draft the reply?
+# Cowherd handles get the Cowherd-specific template; everyone else
+# gets their tier's default.
+derive_draft_style <- function(tier, handle_lower) {
+  if (tier == "1A" && handle_lower %in% COWHERD_HANDLES) {
+    return("tier_1a_cowherd")
   }
-  
-  # Score against each article's keywords
-  best_score <- 0
+  TIER_CONFIG[[tier]]$draft_style
+}
+
+# Tier-1C "analytical hook": a newsbreak tweet only surfaces if it
+# mentions a player/team in the model data OR an article-keyword
+# concept Steve has published on. Filters out generic transactions
+# that don't give Steve anything to add.
+has_analytical_hook <- function(prospect_match, keyword_score) {
+  prospect_match || keyword_score >= 1
+}
+
+# --- Relevance scoring -------------------------------------------------------
+# Tier-aware: returns the keyword score, matched article (for tracking),
+# prospect match, and a should_surface decision based on the tier's rules.
+
+score_tweet <- function(tweet, tier, model_data = NULL) {
+  text       <- tweet$text
+  text_lower <- str_to_lower(text)
+
+  # Hard skip: race/politics — applies to all tiers
+  if (any(str_detect(text_lower, SKIP_KEYWORDS))) {
+    return(list(
+      score          = -1,
+      matched_article = NULL,
+      prospect_match  = FALSE,
+      matched_prospect = NULL,
+      substantive    = FALSE,
+      minutes_old    = NA_real_,
+      velocity       = 0,
+      should_surface = FALSE,
+      reason         = "skip_topic"
+    ))
+  }
+
+  cfg          <- TIER_CONFIG[[tier]]
+  substantive  <- is_substantive(text)
+  minutes_old  <- minutes_since(tweet$created_at)
+  velocity     <- compute_engagement_velocity(tweet$likes, tweet$retweets, minutes_old)
+
+  # Keyword score against article topics
+  best_score   <- 0
   best_article <- NULL
-  
   for (article in ARTICLE_TOPICS) {
     matches <- sum(str_detect(text_lower, str_to_lower(article$keywords)))
     if (matches > best_score) {
-      best_score <- matches
+      best_score   <- matches
       best_article <- article
     }
   }
-  
-  # Also check against prospect names from model data
-  prospect_match <- FALSE
+
+  # Prospect-name matching against model data (NFL draft)
+  prospect_match   <- FALSE
   matched_prospect <- NULL
   if (!is.null(model_data)) {
     r1_prospects <- model_data |> filter(pick_est <= 64)
     for (i in seq_len(nrow(r1_prospects))) {
       pname <- str_to_lower(r1_prospects$player_name[i])
-      # Require full name match to avoid false positives ("Jordan Smith" golfer != prospect)
       if (str_detect(text_lower, fixed(pname))) {
-        prospect_match <- TRUE
+        prospect_match   <- TRUE
         matched_prospect <- r1_prospects[i, ]
-        best_score <- best_score + 2  # Bonus for prospect mention
+        best_score       <- best_score + 2  # Prospect mention bonus
         break
       }
     }
-    # If no full name match, try well-known prospects (unique last names only)
+    # Fallback: distinctive last names only (avoid Smith/Jones collisions)
     if (!prospect_match) {
-      key_prospects <- r1_prospects |> 
+      key_prospects <- r1_prospects |>
         filter(pick_est <= 32) |>
         mutate(last_name = str_extract(str_to_lower(player_name), "\\S+$")) |>
-        # Only match last names that are distinctive enough
-        filter(!last_name %in% c("smith", "johnson", "williams", "jones", 
+        filter(!last_name %in% c("smith", "johnson", "williams", "jones",
                                   "brown", "davis", "miller", "wilson",
                                   "moore", "taylor", "anderson", "thomas",
                                   "jackson", "white", "harris", "martin",
                                   "allen", "young", "king", "wright",
                                   "scott", "green", "baker", "hill",
                                   "love", "woods", "cooper", "parker",
-                                  # NBA/NFL city & team name false positives
                                   "boston", "houston", "dallas", "denver",
                                   "memphis", "indiana", "orlando", "miami",
                                   "phoenix", "portland", "charlotte", "cleveland",
@@ -450,141 +572,200 @@ score_tweet <- function(tweet_text, model_data = NULL) {
       for (i in seq_len(nrow(key_prospects))) {
         last_name <- key_prospects$last_name[i]
         if (str_detect(text_lower, regex(paste0("\\b", last_name, "\\b")))) {
-          prospect_match <- TRUE
+          prospect_match   <- TRUE
           matched_prospect <- key_prospects[i, ] |> select(-last_name)
-          best_score <- best_score + 2
+          best_score       <- best_score + 2
           break
         }
       }
     }
   }
-  
+
+  # --- Tier-aware surfacing decision -----------------------------------------
+  # Stale tweets never surface regardless of tier (freshness gates engagement).
+  too_stale <- minutes_old > cfg$max_age_hours * 60
+
+  # Velocity override: tweet is taking off fast — surface even without keywords.
+  velocity_hit <- is.finite(cfg$velocity_override) && velocity >= cfg$velocity_override
+
+  # Tier-specific gating
+  surface_decision <- if (too_stale) {
+    list(surface = FALSE, reason = "stale")
+  } else if (!substantive) {
+    list(surface = FALSE, reason = "not_substantive")
+  } else if (velocity_hit) {
+    list(surface = TRUE,  reason = "velocity_override")
+  } else if (tier == "1C") {
+    # 1C requires an analytical hook (model data or article concept)
+    if (has_analytical_hook(prospect_match, best_score)) {
+      list(surface = TRUE, reason = "news_hook")
+    } else {
+      list(surface = FALSE, reason = "no_analytical_hook")
+    }
+  } else if (best_score >= cfg$min_score) {
+    list(
+      surface = TRUE,
+      reason  = if (best_score >= 2) "strong_match"
+                else if (best_score == 1) "weak_match"
+                else "tier1a_substantive"
+    )
+  } else {
+    list(surface = FALSE, reason = "below_threshold")
+  }
+
   list(
-    score = best_score,
-    matched_article = best_article,
-    prospect_match = prospect_match,
+    score            = best_score,
+    matched_article  = best_article,
+    prospect_match   = prospect_match,
     matched_prospect = matched_prospect,
-    reason = if (best_score >= 2) "strong_match" else if (best_score == 1) "weak_match" else "no_match"
+    substantive      = substantive,
+    minutes_old      = minutes_old,
+    velocity         = velocity,
+    should_surface   = surface_decision$surface,
+    reason           = surface_decision$reason
   )
 }
 
 # --- Main --------------------------------------------------------------------
 
-args <- commandArgs(trailingOnly = TRUE)
-hours <- 3
-draft_night <- FALSE
+args         <- commandArgs(trailingOnly = TRUE)
+hours        <- 3
+draft_night  <- FALSE
+tier_filter  <- NULL   # if set, only scan handles in this tier (e.g. "1A")
 
 if ("--hours" %in% args) {
-  idx <- which(args == "--hours")
+  idx   <- which(args == "--hours")
   hours <- as.numeric(args[idx + 1])
 }
 if ("--draft-night" %in% args) {
-  hours <- 1
+  hours       <- 1
   draft_night <- TRUE
+}
+if ("--tier" %in% args) {
+  idx         <- which(args == "--tier")
+  tier_filter <- toupper(args[idx + 1])
 }
 
 state <- read_state()
 
-# Check daily limit
-if (state$daily_reply_count >= MAX_REPLIES_PER_DAY) {
-  cat("[]")  # At daily limit
+# Daily candidate cap (soft cap on total surfacings, separate from API reply cap)
+if (!is.null(state$daily_candidate_count) &&
+    state$daily_candidate_count >= MAX_CANDIDATES_PER_DAY) {
+  cat("[]")
   quit(save = "no")
 }
 
-token <- build_token()
-usernames <- parse_monitor_list()
-
-# Load model data for prospect matching
-model_data <- tryCatch(
-  readRDS(MODEL_DATA),
-  error = function(e) NULL
-)
-
-# Resolve user IDs (cache this in state to avoid repeated lookups)
-if (is.null(state$user_ids) || length(state$user_ids) == 0) {
-  user_ids <- resolve_user_ids(usernames, token)
-  state$user_ids <- user_ids
-} else {
-  user_ids <- state$user_ids
-}
-
-# Fetch and score tweets
-candidates <- list()
+token            <- build_token()
+monitor          <- parse_monitor_list_with_tiers()
 engaged_accounts <- parse_engaged_accounts()
 
-for (username in names(user_ids)) {
-  tweets <- fetch_user_tweets(user_ids[[username]], username, token, since_hours = hours)
-  
-  for (tweet in tweets) {
-    # Skip already-seen tweets
-    if (tweet$id %in% state$seen_tweet_ids) next
-    
-    scoring <- score_tweet(tweet$text, model_data)
-    
-    if (scoring$score >= 2) {  # Require at least 2 keyword matches
-      is_engaged <- str_to_lower(tweet$username) %in% engaged_accounts
-      candidate <- list(
-        tweet_id = tweet$id,
-        username = tweet$username,
-        text = tweet$text,
-        created_at = tweet$created_at,
-        impressions = tweet$impressions,
-        likes = tweet$likes,
-        relevance_score = scoring$score,
-        matched_article_slug = scoring$matched_article$slug %||% NA,
-        matched_article_summary = scoring$matched_article$summary %||% NA,
-        prospect_match = scoring$prospect_match,
-        reason = scoring$reason,
-        engagement_status = if (is_engaged) "engaged" else "cold",
-        can_reply_via_api = is_engaged
-      )
-      
-      # Add prospect data if matched
-      if (scoring$prospect_match && !is.null(scoring$matched_prospect)) {
-        candidate$prospect_name <- scoring$matched_prospect$player_name
-        candidate$prospect_position <- scoring$matched_prospect$position
-        candidate$prospect_school <- scoring$matched_prospect$school
-        candidate$prospect_boom <- scoring$matched_prospect$p_boom
-        candidate$prospect_bust <- scoring$matched_prospect$p_bust
-        candidate$prospect_verdict <- scoring$matched_prospect$model_verdict
-      }
-      
-      candidates <- c(candidates, list(candidate))
-    }
-  }
-  
-  Sys.sleep(1)  # Rate limit: 1 second between users
+# Apply tier filter (used by the fast-lane cron to scan only tier-1A/1C)
+if (!is.null(tier_filter)) {
+  monitor <- monitor[monitor$tier == tier_filter, , drop = FALSE]
 }
 
-# Sort by relevance score descending, then by impressions
+# Load model data for prospect matching
+model_data <- tryCatch(readRDS(MODEL_DATA), error = function(e) NULL)
+
+# Resolve user IDs (cached in state to avoid repeated lookups)
+needed_handles <- monitor$handle
+cached_ids     <- state$user_ids %||% list()
+missing        <- setdiff(needed_handles, names(cached_ids))
+if (length(missing) > 0) {
+  new_ids        <- resolve_user_ids(missing, token)
+  cached_ids     <- c(cached_ids, new_ids)
+  state$user_ids <- cached_ids
+}
+user_ids <- cached_ids[needed_handles]
+
+# Fetch + score tweets
+candidates <- list()
+
+for (i in seq_len(nrow(monitor))) {
+  handle <- monitor$handle[i]
+  tier   <- monitor$tier[i]
+  uid    <- user_ids[[handle]]
+  if (is.null(uid)) next
+
+  tweets <- fetch_user_tweets(uid, handle, token, since_hours = hours)
+
+  for (tweet in tweets) {
+    if (tweet$id %in% state$seen_tweet_ids) next
+
+    scoring <- score_tweet(tweet, tier, model_data)
+    if (!isTRUE(scoring$should_surface)) next
+
+    handle_lower <- str_to_lower(tweet$username)
+    is_engaged   <- handle_lower %in% engaged_accounts
+    is_cowherd   <- handle_lower %in% COWHERD_HANDLES
+    draft_style  <- derive_draft_style(tier, handle_lower)
+
+    candidate <- list(
+      tweet_id             = tweet$id,
+      username             = tweet$username,
+      tier                 = tier,
+      is_cowherd           = is_cowherd,
+      text                 = tweet$text,
+      created_at           = tweet$created_at,
+      minutes_old          = round(scoring$minutes_old, 1),
+      impressions          = tweet$impressions,
+      likes                = tweet$likes,
+      retweets             = tweet$retweets,
+      engagement_per_min   = round(scoring$velocity, 2),
+      is_substantive       = scoring$substantive,
+      relevance_score      = scoring$score,
+      matched_article_slug = scoring$matched_article$slug %||% NA,
+      prospect_match       = scoring$prospect_match,
+      reason               = scoring$reason,
+      engagement_status    = if (is_engaged) "engaged" else "cold",
+      can_reply_via_api    = is_engaged,
+      draft_style          = draft_style,
+      draft_prompt_path    = file.path("prompts", paste0("x_reply_", draft_style, ".md"))
+    )
+
+    if (scoring$prospect_match && !is.null(scoring$matched_prospect)) {
+      candidate$prospect_name     <- scoring$matched_prospect$player_name
+      candidate$prospect_position <- scoring$matched_prospect$position
+      candidate$prospect_school   <- scoring$matched_prospect$school
+      candidate$prospect_boom     <- scoring$matched_prospect$p_boom
+      candidate$prospect_bust     <- scoring$matched_prospect$p_bust
+      candidate$prospect_verdict  <- scoring$matched_prospect$model_verdict
+    }
+
+    candidates <- c(candidates, list(candidate))
+  }
+
+  Sys.sleep(1)  # Rate-limit courtesy
+}
+
+# --- Sort and cap ------------------------------------------------------------
+# Tier-1 surfaces before tier-2; within tier, freshness then velocity.
 if (length(candidates) > 0) {
-  scores <- map_dbl(candidates, ~ .x$relevance_score)
-  impressions <- map_dbl(candidates, ~ .x$impressions)
-  order_idx <- order(-scores, -impressions)
-  candidates <- candidates[order_idx]
-  
-  # Split into engaged (API-ready) and cold (manual) candidates
+  tier_rank   <- c("1A" = 1L, "1C" = 2L, "1B" = 3L, "2" = 4L)
+  tier_idx    <- tier_rank[map_chr(candidates, ~ .x$tier)]
+  minutes_old <- map_dbl(candidates, ~ .x$minutes_old)
+  velocity    <- map_dbl(candidates, ~ .x$engagement_per_min)
+  order_idx   <- order(tier_idx, minutes_old, -velocity)
+  candidates  <- candidates[order_idx]
+
+  # Cap API replies separately (engaged-account auto-replies)
   engaged_candidates <- candidates[map_lgl(candidates, ~ .x$can_reply_via_api)]
   cold_candidates    <- candidates[map_lgl(candidates, ~ !.x$can_reply_via_api)]
 
-  # Cap API-ready replies at daily limit
-  remaining <- MAX_REPLIES_PER_DAY - state$daily_reply_count
-  engaged_candidates <- engaged_candidates[seq_len(min(length(engaged_candidates), remaining))]
+  reply_remaining    <- max(MAX_REPLIES_PER_DAY - (state$daily_reply_count %||% 0), 0)
+  engaged_candidates <- engaged_candidates[seq_len(min(length(engaged_candidates), reply_remaining))]
 
-  # Always surface up to 3 cold candidates so Steve can reply manually
-  cold_candidates <- cold_candidates[seq_len(min(length(cold_candidates), 3))]
-
-  # Recombine: engaged first (API), then cold (manual)
-  candidates <- c(engaged_candidates, cold_candidates)
+  # Combine and cap total at MAX_CANDIDATES_PER_DAY (less any already surfaced today)
+  combined         <- c(engaged_candidates, cold_candidates)
+  surfaced_today   <- state$daily_candidate_count %||% 0
+  remaining_total  <- max(MAX_CANDIDATES_PER_DAY - surfaced_today, 0)
+  candidates       <- combined[seq_len(min(length(combined), remaining_total))]
 }
 
-# Update seen tweets
-all_tweet_ids <- unique(c(
-  state$seen_tweet_ids,
-  map_chr(candidates, ~ .x$tweet_id)
-))
-# Keep last 500 to prevent unbounded growth
+# Update seen tweets and daily candidate count
+all_tweet_ids        <- unique(c(state$seen_tweet_ids, map_chr(candidates, ~ .x$tweet_id)))
 state$seen_tweet_ids <- tail(all_tweet_ids, 500)
+state$daily_candidate_count <- (state$daily_candidate_count %||% 0) + length(candidates)
 write_state(state)
 
 # Output
