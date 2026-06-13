@@ -631,7 +631,9 @@ score_tweet <- function(tweet, tier, model_data = NULL) {
 args         <- commandArgs(trailingOnly = TRUE)
 hours        <- 3
 draft_night  <- FALSE
-tier_filter  <- NULL   # if set, only scan handles in this tier (e.g. "1A")
+# tier_filter accepts a single tier ("1A") or comma-separated set
+# ("1A,1B,1C") for the fast-lane cron. NULL means scan all tiers.
+tier_filter  <- NULL
 
 if ("--hours" %in% args) {
   idx   <- which(args == "--hours")
@@ -643,7 +645,8 @@ if ("--draft-night" %in% args) {
 }
 if ("--tier" %in% args) {
   idx         <- which(args == "--tier")
-  tier_filter <- toupper(args[idx + 1])
+  raw         <- args[idx + 1]
+  tier_filter <- toupper(str_trim(str_split(raw, ",")[[1]]))
 }
 
 state <- read_state()
@@ -659,9 +662,10 @@ token            <- build_token()
 monitor          <- parse_monitor_list_with_tiers()
 engaged_accounts <- parse_engaged_accounts()
 
-# Apply tier filter (used by the fast-lane cron to scan only tier-1A/1C)
+# Apply tier filter. Accepts a single tier or a set (fast-lane uses
+# {"1A", "1B", "1C"} together; slow-lane uses {"2"}).
 if (!is.null(tier_filter)) {
-  monitor <- monitor[monitor$tier == tier_filter, , drop = FALSE]
+  monitor <- monitor[monitor$tier %in% tier_filter, , drop = FALSE]
 }
 
 # Load model data for prospect matching
