@@ -149,16 +149,3 @@ third variation.
 
 ---
 
-## Building in Public Log
-**Ask at the end of EVERY session, not just when something feels notable.**
-Log lives at `/Users/stephenmerritt/content/draft/building_in_public_log.md`
-(cross-repo reference — it's in the content repo).
-
-Proactive prompt at natural stopping points:
-
-> "Any candidates for the building in public log?"
-
-Good autopilot candidates: voice prompt iterations that meaningfully change
-output, unexpected Substack RSS behaviors, X API gotchas, the approval-queue
-pattern itself (as a distribution architecture), how the Mac Mini launchd setup
-went. Not routine: script cleanup, dependency bumps, cosmetic fixes.
