@@ -69,7 +69,11 @@ Join `x-monitor-surfacings.jsonl` and `x-monitor-feedback.jsonl` on
 ### `morning-sports-digest.R` / `morning-sports-digest.sh`
 6:00am ET digest — fetches previous day's ESPN/Fox Sports tweets,
 filters for NBA/NFL/Golf, identifies Star of the Night, sends to
-Telegram.
+Telegram. After the digest send, runs a second Claude call against
+the same tweet bundle to produce 3-5 **Today's Takes** (original-post
+candidates with hooks) and sends them as a separate Telegram message.
+If yesterday's news was thin, the takes call returns the
+`NO_TAKES_TODAY` sentinel and no second message is sent.
 
 ### `weekly-digest.R` / `weekly-digest.sh`
 Weekly summary digest.

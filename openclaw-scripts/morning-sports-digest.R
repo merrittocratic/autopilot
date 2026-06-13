@@ -232,6 +232,65 @@ call_claude <- function(tweet_bundle, date_label) {
   content(resp)$content[[1]]$text
 }
 
+# --- Call Claude to surface Today's Takes ------------------------------------
+# Second Claude call against the same tweet bundle. Produces 3-5
+# original-post candidates (stories Steve could write a Substack/X post
+# about), not a reply-or-skip list. Returns the literal sentinel
+# "NO_TAKES_TODAY" when yesterday's news doesn't rise to take-worthy.
+
+call_claude_takes <- function(tweet_bundle, date_label) {
+  prompt <- glue(
+    "You are Earnest. Steve writes data-driven sports analysis on Substack ",
+    "under the TheMerrittocracy brand. He wants 3-5 ORIGINAL-POST candidates ",
+    "for today, derived from yesterday's sports news bundle below.\n\n",
+    "These are NOT reply candidates. They are stories Steve could write a ",
+    "standalone Substack post or original X thread about. Different mode of ",
+    "review: he's looking for a writing prompt, not a copy-paste reply.\n\n",
+    "Steve's editorial lanes:\n",
+    "- NFL draft analytics (boom/bust model, organizational talent development, surplus value)\n",
+    "- NBA playoffs (analytical narrative, coaching value, seeding dynamics, star vs role-player math)\n",
+    "- Golf majors (strokes gained, course fit, form vs prior, model accountability)\n",
+    "- Sports narratives broken by data (the general pattern under it all)\n\n",
+    "For each candidate, produce in Markdown:\n",
+    "1. **<short headline>**\n",
+    "   - Trigger: 1 sentence of what happened\n",
+    "   - Angle: contrarian / model-take / narrative-check / data-extension\n",
+    "   - Hook: 1-2 sentences pitching Steve's potential take, in first person\n\n",
+    "Rules:\n",
+    "1. Bias toward stories where Steve can bring a DATA angle. Pure ",
+    "transactions/news without an analytical hook are NOT candidates.\n",
+    "2. NBA, NFL, Golf only. Skip MLB, soccer, college, etc.\n",
+    "3. Skip stories with race/politics content.\n",
+    "4. If yesterday's news was thin, return fewer high-quality candidates ",
+    "rather than padding to 5.\n",
+    "5. If literally no story rises to take-worthy, return the EXACT string ",
+    "NO_TAKES_TODAY (no other text, no quotes, no formatting).\n\n",
+    "Date: {date_label}\n\n",
+    "Tweets bundle:\n{tweet_bundle}"
+  )
+
+  resp <- POST(
+    "https://api.anthropic.com/v1/messages",
+    add_headers(
+      "x-api-key"         = ANTHROPIC_KEY,
+      "anthropic-version" = "2023-06-01",
+      "content-type"      = "application/json"
+    ),
+    body = toJSON(list(
+      model      = "claude-haiku-4-5",
+      max_tokens = 800,
+      messages   = list(list(role = "user", content = prompt))
+    ), auto_unbox = TRUE),
+    encode = "raw"
+  )
+
+  if (status_code(resp) != 200) {
+    warning(glue("Takes API error: {status_code(resp)} -- {rawToChar(content(resp, as='raw'))}"))
+    return(NULL)
+  }
+  content(resp)$content[[1]]$text
+}
+
 # --- Send Telegram message ---------------------------------------------------
 
 send_telegram <- function(text) {
@@ -340,4 +399,38 @@ if (dry_run) {
   cat("Sending to Telegram...\n")
   ok <- send_telegram(message)
   if (ok) cat("Delivered to Steve ✅\n") else cat("Telegram send failed ❌\n")
+}
+
+# --- Today's Takes (Bundle #4) ----------------------------------------------
+# Second Claude call against the same tweet bundle, surfacing 3-5
+# original-post candidates. Sent as a separate Telegram message so
+# Steve can review in a different mental mode (browse-for-writing
+# rather than action-on-reply).
+
+cat("\nComputing Today's Takes...\n")
+takes <- tryCatch(
+  call_claude_takes(bundle, date_label),
+  error = function(e) {
+    warning(glue("Takes synthesis failed: {e$message}"))
+    NULL
+  }
+)
+
+takes_trimmed <- if (is.null(takes)) NULL else trimws(takes)
+
+if (is.null(takes_trimmed) || takes_trimmed == "" || takes_trimmed == "NO_TAKES_TODAY") {
+  cat("No takes today (quiet news cycle or model returned NO_TAKES_TODAY)\n")
+} else {
+  takes_header  <- glue("*Today's Takes -- {date_label}*\n\n")
+  takes_message <- paste0(takes_header, takes_trimmed)
+
+  if (dry_run) {
+    cat("\n--- DRY RUN TAKES ---\n")
+    cat(takes_message, "\n")
+    cat("--- END ---\n")
+  } else {
+    cat("Sending takes to Telegram...\n")
+    ok_takes <- send_telegram(takes_message)
+    if (ok_takes) cat("Takes delivered\n") else cat("Takes send failed\n")
+  }
 }
