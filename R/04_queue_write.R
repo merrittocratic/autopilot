@@ -130,7 +130,7 @@ update_queue_status <- function(post_id, tweet_number, new_status,
 
   queue <- read_sheet(sheet_id, sheet = "queue")
 
-  row_idx <- which(queue$post_id == post_id & queue$tweet_number == tweet_number)
+  row_idx <- which(queue$post_id == post_id & as.numeric(queue$tweet_number) == as.numeric(tweet_number))
 
   if (length(row_idx) == 0) {
     cli_alert_warning("No matching row for post {post_id}, tweet {tweet_number}")
