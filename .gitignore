@@ -4,6 +4,9 @@ staging/*
 logs/*
 !logs/.gitkeep
 data/feed_state.json
+data/x-monitor-surfacings.jsonl
+data/x-monitor-feedback.jsonl
+data/x-feedback-poller-state.json
 *service-account*.json
 merrittocracy-autopilot-*.json
 .Rproj.user
