@@ -243,6 +243,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("knicks", "spurs", "kat", "karl-anthony towns", "jalen brunson", "dejounte castle", "wembanyama", "nba finals", "2-0 series lead", "assists trend", "foul trouble", "plus/minus", "defensive strategy", "playoff trends", "point-of-attack defense"),
     summary = "Knicks defy preseason trend predictions to lead Finals 2-0 behind KAT's physical defense and Brunson's clutch plays."
   )
+,
+  list(
+    slug = "who-the-f-is-private-santiago",
+    keywords = c("jimmy stanger", "u.s. open golf", "golf tournament prediction", "predictive model", "strokes gained", "shinnecock", "weather impact golf", "era5 reanalysis data", "win probability", "pga championship", "golf analytics", "course conditions", "wind speed analysis", "player performance modeling", "golf forecasting"),
+    summary = "A predictive golf model improved by adding weather data and fixing win probability calculations for tournament predictions."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
