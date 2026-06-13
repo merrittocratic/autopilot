@@ -129,19 +129,31 @@ notify_telegram <- function(message, chat_id = "8676616323") {
     return(invisible(NULL))
   }
 
-  resp <- tryCatch(
-    request(glue("https://api.telegram.org/bot{bot_token}/sendMessage")) |>
-      req_body_json(list(
-        chat_id    = chat_id,
-        text       = message,
-        parse_mode = "Markdown"
-      )) |>
-      req_perform(),
-    error = function(e) {
-      cli_alert_warning("Telegram notification failed: {e$message}")
-      NULL
-    }
-  )
+  # Use req_error(..., is_error = FALSE) so httr2 returns a response object
+  # on 4xx/5xx instead of throwing, letting us inspect the status and retry.
+  send_msg <- function(parse_mode = "Markdown") {
+    body <- list(chat_id = chat_id, text = message)
+    if (!is.null(parse_mode)) body$parse_mode <- parse_mode
+    tryCatch(
+      request(glue("https://api.telegram.org/bot{bot_token}/sendMessage")) |>
+        req_body_json(body) |>
+        req_error(is_error = function(resp) FALSE) |>
+        req_perform(),
+      error = function(e) {
+        cli_alert_warning("Telegram request error: {e$message}")
+        NULL
+      }
+    )
+  }
+
+  resp <- send_msg("Markdown")
+
+  # 400 on Markdown usually means a bare * or _ in dynamic content (e.g. article
+  # titles like "Who the F* is..."). Retry as plain text.
+  if (!is.null(resp) && resp_status(resp) == 400) {
+    cli_alert_warning("Telegram Markdown parse error — retrying as plain text")
+    resp <- send_msg(NULL)
+  }
 
   if (!is.null(resp) && resp_status(resp) == 200) {
     cli_alert_success("Telegram notification sent")
