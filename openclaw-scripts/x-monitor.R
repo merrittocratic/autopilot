@@ -296,6 +296,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("jimmy stanger", "u.s. open golf", "golf tournament prediction", "predictive model", "strokes gained", "shinnecock", "weather impact golf", "era5 reanalysis data", "win probability", "pga championship", "golf analytics", "course conditions", "wind speed analysis", "player performance modeling", "golf forecasting"),
     summary = "A predictive golf model improved by adding weather data and fixing win probability calculations for tournament predictions."
   )
+,
+  list(
+    slug = "it-took-12-points-to-erase-53-years",
+    keywords = c("2026 nba finals", "new york knicks", "san antonio spurs", "wembanyama", "fourth quarter collapse", "12-point margin", "3-1 finals lead", "castle", "brunson", "kat", "first quarter dominance", "spurs outscored q4", "nba championship", "finals comeback", "point differential"),
+    summary = "Knicks won 2026 Finals despite being outscored by 12 total points, as San Antonio's first-quarter dominance crumbled in fourth quarters."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
