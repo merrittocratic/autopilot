@@ -73,12 +73,14 @@ if (mode == "--check") {
 
         cli_alert_success("Post queued for review: {post$title}")
 
-        # Notify Steve on Telegram
+        # Notify Steve on Telegram with full tweet text so he can review inline
         # Note: x-monitor.R keywords are synced separately by keyword-sync.sh (daily at 6:15am)
+        tweet_lines <- paste0(thread$tweet_number, ". ", thread$text)
+        tweet_body  <- paste(tweet_lines, collapse = "\n\n")
         notify_telegram(glue(
-          "\U0001F4DD *New article drafted:* {post$title}\n",
-          "Tweet thread ({nrow(thread)} tweets) is in the queue, ready for your review.",
-          "\n\nReply with the tweet numbers you want to post (e.g. \"post 1 and 5\")."
+          "\U0001F4DD *{post$title}*\n\n",
+          "{tweet_body}\n\n",
+          "Reply with numbers to post, e.g. \"post 1 and 5\" or \"skip all\"."
         ))
       } else {
         cli_alert_danger("Thread drafting failed for: {post$title}")
