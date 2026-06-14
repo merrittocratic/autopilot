@@ -418,40 +418,73 @@ resolve_user_ids <- function(usernames, token) {
 }
 
 # --- Fetch recent tweets from a user ----------------------------------------
+# fetch_quotes = TRUE (tier 1A/1B only): also fetches the text of any quoted
+# tweet so that a quote-tweet like Cowherd's "👀 [win-prob charts]" is scored
+# on the *quoted* content, not just the emoji wrapper.
 
-fetch_user_tweets <- function(user_id, username, token, since_hours = 3) {
+fetch_user_tweets <- function(user_id, username, token, since_hours = 3,
+                              fetch_quotes = FALSE) {
   start_time <- format(
     Sys.time() - as.difftime(since_hours, units = "hours"),
     "%Y-%m-%dT%H:%M:%SZ",
     tz = "UTC"
   )
-  
+
+  query_params <- list(
+    max_results           = "10",
+    start_time            = start_time,
+    "tweet.fields"        = "created_at,text,public_metrics,conversation_id,referenced_tweets",
+    exclude               = "retweets,replies"
+  )
+  if (fetch_quotes) {
+    query_params[["expansions"]]              <- "referenced_tweets.id"
+    query_params[["referenced_tweets.fields"]] <- "text"
+  }
+
   resp <- GET(
     paste0("https://api.twitter.com/2/users/", user_id, "/tweets"),
     config = config(token = token),
-    query = list(
-      max_results = "10",
-      start_time = start_time,
-      "tweet.fields" = "created_at,text,public_metrics,conversation_id",
-      exclude = "retweets,replies"  # Only original tweets
-    )
+    query  = query_params
   )
-  
+
   if (status_code(resp) != 200) return(list())
-  
-  data <- content(resp)$data
+
+  body <- content(resp)
+  data <- body$data
   if (is.null(data)) return(list())
-  
-  map(data, ~ list(
-    id = .x$id,
-    text = .x$text,
-    created_at = .x$created_at,
-    username = username,
-    impressions = .x$public_metrics$impression_count %||% 0,
-    likes = .x$public_metrics$like_count %||% 0,
-    retweets = .x$public_metrics$retweet_count %||% 0,
-    replies = .x$public_metrics$reply_count %||% 0
-  ))
+
+  # Build id -> text lookup for referenced (quoted) tweets
+  referenced_map <- list()
+  if (fetch_quotes && !is.null(body$includes$tweets)) {
+    for (rt in body$includes$tweets) {
+      referenced_map[[rt$id]] <- rt$text
+    }
+  }
+
+  map(data, function(tw) {
+    # Resolve quoted tweet text (if present and requested)
+    quoted_text <- NULL
+    if (fetch_quotes && !is.null(tw$referenced_tweets)) {
+      for (ref in tw$referenced_tweets) {
+        if (!is.null(ref$type) && ref$type == "quoted" &&
+            !is.null(referenced_map[[ref$id]])) {
+          quoted_text <- referenced_map[[ref$id]]
+          break
+        }
+      }
+    }
+    list(
+      id          = tw$id,
+      text        = tw$text,
+      quoted_text = quoted_text,
+      created_at  = tw$created_at,
+      username    = username,
+      impressions = tw$public_metrics$impression_count %||% 0,
+      likes       = tw$public_metrics$like_count %||% 0,
+      retweets    = tw$public_metrics$retweet_count %||% 0,
+      replies     = tw$public_metrics$reply_count %||% 0
+    )
+  })
 }
 
 # --- Tweet heuristics --------------------------------------------------------
@@ -459,6 +492,8 @@ fetch_user_tweets <- function(user_id, username, token, since_hours = 3) {
 # A tweet is "substantive" if it's long enough to have a real take in it
 # OR contains a stat/number/question. Filters out "good morning",
 # brand promo, schedule announcements, and similar throwaways.
+# For tier 1A/1B quote tweets, combined_text includes the quoted content so
+# a short wrapper (e.g. "👀") is scored on what it's actually quoting.
 is_substantive <- function(text) {
   if (nchar(text) < 60) return(FALSE)
   has_number   <- str_detect(text, "\\d")
@@ -505,7 +540,14 @@ has_analytical_hook <- function(prospect_match, keyword_score) {
 # prospect match, and a should_surface decision based on the tier's rules.
 
 score_tweet <- function(tweet, tier, model_data = NULL) {
-  text       <- tweet$text
+  # For tier 1A/1B, score against original + quoted text so that a minimal
+  # wrapper ("👀", single emoji) doesn't kill a substantive quote tweet.
+  combined_text <- if (tier %in% c("1A", "1B") && !is.null(tweet$quoted_text)) {
+    paste(tweet$text, tweet$quoted_text, sep = " ")
+  } else {
+    tweet$text
+  }
+  text       <- combined_text
   text_lower <- str_to_lower(text)
 
   # Hard skip: race/politics — applies to all tiers
@@ -691,7 +733,8 @@ for (i in seq_len(nrow(monitor))) {
   uid    <- user_ids[[handle]]
   if (is.null(uid)) next
 
-  tweets <- fetch_user_tweets(uid, handle, token, since_hours = hours)
+  tweets <- fetch_user_tweets(uid, handle, token, since_hours = hours,
+                              fetch_quotes = tier %in% c("1A", "1B"))
 
   for (tweet in tweets) {
     if (tweet$id %in% state$seen_tweet_ids) next
