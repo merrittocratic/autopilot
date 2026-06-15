@@ -23,7 +23,7 @@ each line. Edit this file to promote/demote accounts.
 ## NFL (Draft-First, Analytics-Weighted)
 
 ### Breaking news / transactions
-- @RapSheet [tier:1C] — Ian Rapoport, NFL Network
+- @RapSheet [tier:2] — Ian Rapoport, NFL Network
 - @TomPelissero — NFL Network
 - @AdamSchefter [tier:1C] — ESPN
 - @Dane_Brugler [tier:1A] — The Athletic, best draft reporter
