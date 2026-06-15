@@ -429,7 +429,8 @@ resolve_user_ids <- function(usernames, token) {
 # on the *quoted* content, not just the emoji wrapper.
 
 fetch_user_tweets <- function(user_id, username, token, since_hours = 3,
-                              fetch_quotes = FALSE) {
+                              fetch_quotes = FALSE,
+                              include_retweets = FALSE) {
   start_time <- format(
     Sys.time() - as.difftime(since_hours, units = "hours"),
     "%Y-%m-%dT%H:%M:%SZ",
@@ -440,7 +441,7 @@ fetch_user_tweets <- function(user_id, username, token, since_hours = 3,
     max_results           = "10",
     start_time            = start_time,
     "tweet.fields"        = "created_at,text,public_metrics,conversation_id,referenced_tweets",
-    exclude               = "retweets,replies"
+    exclude               = if (include_retweets) "replies" else "retweets,replies"
   )
   if (fetch_quotes) {
     query_params[["expansions"]]              <- "referenced_tweets.id"
@@ -740,7 +741,8 @@ for (i in seq_len(nrow(monitor))) {
   if (is.null(uid)) next
 
   tweets <- fetch_user_tweets(uid, handle, token, since_hours = hours,
-                              fetch_quotes = tier %in% c("1A", "1B"))
+                              fetch_quotes = tier %in% c("1A", "1B"),
+                              include_retweets = tier == "1A")
 
   for (tweet in tweets) {
     if (tweet$id %in% state$seen_tweet_ids) next
