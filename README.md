@@ -98,7 +98,7 @@ The check job runs every 15 minutes. The post job runs every 5 minutes but only 
 
 1. Publish a Substack post as normal
 2. Within 15 minutes, the pipeline detects it, extracts content, and drafts a thread via Claude
-3. Open the Google Sheet on your phone — review the draft, edit tweet text if needed, change status from "pending" to "approved"
+3. Telegram sends the full thread inline — review the tweets there, then open the Google Sheet to edit text if needed and change status from "pending" to "approved"
 4. Within 5 minutes, the pipeline picks up the approved thread and posts it to X as a reply chain
 5. The sheet updates with tweet IDs and timestamps
 
