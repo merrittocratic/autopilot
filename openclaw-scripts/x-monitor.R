@@ -308,6 +308,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("la masia", "youth soccer pipeline", "american athletes soccer", "saquon barkley", "justin jefferson", "jahmyr gibbs", "j.j. watt goalkeeper", "elite soccer xi", "youth academy development", "world cup performance", "athletic talent drain", "cornerbacks defenders", "barcelona scouts", "mbappé", "neymar"),
     summary = "American sports waste elite athletic talent on football instead of developing world-class soccer players through early academy systems."
   )
+,
+  list(
+    slug = "seven-favorites-then-it-gets-fun",
+    keywords = c("shinnecock hills", "u.s. open", "scheffler", "mcilroy", "rahm", "schauffele", "fleetwood", "cantlay", "fitzpatrick", "morikawa", "strokes gained", "win probability", "approach game", "fairway accuracy", "iron play"),
+    summary = "Market overvalues McIlroy's name while underpricing Fleetwood and Morikawa's superior recent form at Shinnecock."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
