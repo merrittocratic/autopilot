@@ -302,6 +302,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("2026 nba finals", "new york knicks", "san antonio spurs", "wembanyama", "fourth quarter collapse", "12-point margin", "3-1 finals lead", "castle", "brunson", "kat", "first quarter dominance", "spurs outscored q4", "nba championship", "finals comeback", "point differential"),
     summary = "Knicks won 2026 Finals despite being outscored by 12 total points, as San Antonio's first-quarter dominance crumbled in fourth quarters."
   )
+,
+  list(
+    slug = "la-masia-never-got-these-kids",
+    keywords = c("la masia", "youth soccer pipeline", "american athletes soccer", "saquon barkley", "justin jefferson", "jahmyr gibbs", "j.j. watt goalkeeper", "elite soccer xi", "youth academy development", "world cup performance", "athletic talent drain", "cornerbacks defenders", "barcelona scouts", "mbappé", "neymar"),
+    summary = "American sports waste elite athletic talent on football instead of developing world-class soccer players through early academy systems."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
