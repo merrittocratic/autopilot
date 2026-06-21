@@ -314,6 +314,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("shinnecock hills", "u.s. open", "scheffler", "mcilroy", "rahm", "schauffele", "fleetwood", "cantlay", "fitzpatrick", "morikawa", "strokes gained", "win probability", "approach game", "fairway accuracy", "iron play"),
     summary = "Market overvalues McIlroy's name while underpricing Fleetwood and Morikawa's superior recent form at Shinnecock."
   )
+,
+  list(
+    slug = "a-tale-of-two-tee-times",
+    keywords = c("wyndham clark", "collin schauffele", "matt fitzpatrick", "rory mcilroy", "scottie scheffler", "shinnecock hills", "usga", "strokes gained", "approach play", "putting", "wind conditions", "thursday wave advantage", "moving day", "win probability", "regression to the mean"),
+    summary = "Weather and course setup create unequal scoring conditions between AM/PM tee times, with Wyndham Clark's hot putter and approach game leading after two rounds."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
