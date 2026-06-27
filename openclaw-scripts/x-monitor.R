@@ -40,6 +40,8 @@ MODEL_DATA <- file.path(HOME_DIR, "nfl-draft-model", "data", "05_scored_2026.rds
 # Daily caps
 MAX_REPLIES_PER_DAY    <- 3   # API-eligible replies (engaged accounts only)
 MAX_CANDIDATES_PER_DAY <- 8   # total surfacings across all tiers per day
+TRACKED_TIERS          <- c("1A", "1B", "1C", "2")
+RESERVED_TIER_SLOTS    <- c("1A" = 1L, "1B" = 2L)
 
 # Tier-specific thresholds. The min_score is the keyword-match floor;
 # velocity_override is an engagement-per-minute threshold that surfaces
@@ -364,14 +366,17 @@ read_state <- function() {
       seen_tweet_ids         = character(0),
       daily_reply_count      = 0,
       daily_candidate_count  = 0,
+      daily_tier_counts      = as.list(stats::setNames(rep(0L, length(TRACKED_TIERS)), TRACKED_TIERS)),
       day                    = as.character(Sys.Date())
     ))
   }
   state <- fromJSON(STATE_FILE, simplifyVector = FALSE)
+  state$daily_tier_counts <- normalize_tier_counts(state$daily_tier_counts)
   # Reset daily counters on a new day
   if (is.null(state$day) || state$day != as.character(Sys.Date())) {
     state$daily_reply_count     <- 0
     state$daily_candidate_count <- 0
+    state$daily_tier_counts     <- as.list(stats::setNames(rep(0L, length(TRACKED_TIERS)), TRACKED_TIERS))
     state$replied_today         <- list()
     state$day                   <- as.character(Sys.Date())
   }
@@ -381,6 +386,61 @@ read_state <- function() {
 write_state <- function(state) {
   state$last_scan <- format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
   write(toJSON(state, auto_unbox = TRUE, pretty = TRUE), STATE_FILE)
+}
+
+normalize_tier_counts <- function(x = NULL) {
+  counts <- as.list(stats::setNames(rep(0L, length(TRACKED_TIERS)), TRACKED_TIERS))
+  if (is.null(x)) return(counts)
+
+  for (tier in TRACKED_TIERS) {
+    value <- x[[tier]]
+    if (is.null(value) || length(value) == 0 || is.na(value)) value <- 0L
+    counts[[tier]] <- as.integer(value)
+  }
+
+  counts
+}
+
+remaining_reserved_slots <- function(state) {
+  tier_counts <- normalize_tier_counts(state$daily_tier_counts)
+  stats::setNames(
+    vapply(
+      names(RESERVED_TIER_SLOTS),
+      function(tier) {
+        max(as.integer(RESERVED_TIER_SLOTS[[tier]]) - as.integer(tier_counts[[tier]]), 0L)
+      },
+      integer(1)
+    ),
+    names(RESERVED_TIER_SLOTS)
+  )
+}
+
+take_candidates <- function(candidates, n) {
+  if (n <= 0 || length(candidates) == 0) return(list())
+  candidates[seq_len(min(length(candidates), n))]
+}
+
+select_candidates_with_reservations <- function(candidates, remaining_total, state) {
+  if (remaining_total <= 0 || length(candidates) == 0) return(list())
+
+  reserved_remaining <- remaining_reserved_slots(state)
+  selected           <- list()
+  selected_ids       <- character(0)
+
+  for (tier in names(reserved_remaining)) {
+    tier_candidates <- candidates[map_chr(candidates, ~ .x$tier) == tier]
+    picked          <- take_candidates(tier_candidates, reserved_remaining[[tier]])
+    if (length(picked) == 0) next
+
+    selected     <- c(selected, picked)
+    selected_ids <- c(selected_ids, map_chr(picked, ~ .x$tweet_id))
+  }
+
+  remaining_slots <- remaining_total - length(selected)
+  if (remaining_slots <= 0) return(selected)
+
+  remaining_candidates <- candidates[!map_chr(candidates, ~ .x$tweet_id) %in% selected_ids]
+  c(selected, take_candidates(remaining_candidates, remaining_slots))
 }
 
 # --- Parse monitor list ------------------------------------------------------
@@ -818,9 +878,9 @@ for (i in seq_len(nrow(monitor))) {
 }
 
 # --- Sort and cap ------------------------------------------------------------
-# Tier-1 surfaces before tier-2; within tier, freshness then velocity.
+# Tier priority is 1A, then 1B, then 1C, then 2; within tier, freshness then velocity.
 if (length(candidates) > 0) {
-  tier_rank   <- c("1A" = 1L, "1C" = 2L, "1B" = 3L, "2" = 4L)
+  tier_rank   <- c("1A" = 1L, "1B" = 2L, "1C" = 3L, "2" = 4L)
   tier_idx    <- tier_rank[map_chr(candidates, ~ .x$tier)]
   minutes_old <- map_dbl(candidates, ~ .x$minutes_old)
   velocity    <- map_dbl(candidates, ~ .x$engagement_per_min)
@@ -834,17 +894,24 @@ if (length(candidates) > 0) {
   reply_remaining    <- max(MAX_REPLIES_PER_DAY - (state$daily_reply_count %||% 0), 0)
   engaged_candidates <- engaged_candidates[seq_len(min(length(engaged_candidates), reply_remaining))]
 
-  # Combine and cap total at MAX_CANDIDATES_PER_DAY (less any already surfaced today)
+  # Combine and cap total at MAX_CANDIDATES_PER_DAY (less any already surfaced today),
+  # while leaving daily room for reserved 1A/1B slots.
   combined         <- c(engaged_candidates, cold_candidates)
   surfaced_today   <- state$daily_candidate_count %||% 0
   remaining_total  <- max(MAX_CANDIDATES_PER_DAY - surfaced_today, 0)
-  candidates       <- combined[seq_len(min(length(combined), remaining_total))]
+  candidates       <- select_candidates_with_reservations(combined, remaining_total, state)
 }
 
 # Update seen tweets and daily candidate count
 all_tweet_ids        <- unique(c(state$seen_tweet_ids, map_chr(candidates, ~ .x$tweet_id)))
 state$seen_tweet_ids <- tail(all_tweet_ids, 500)
 state$daily_candidate_count <- (state$daily_candidate_count %||% 0) + length(candidates)
+state$daily_tier_counts <- normalize_tier_counts(state$daily_tier_counts)
+if (length(candidates) > 0) {
+  for (tier in map_chr(candidates, ~ .x$tier)) {
+    state$daily_tier_counts[[tier]] <- as.integer(state$daily_tier_counts[[tier]] %||% 0L) + 1L
+  }
+}
 write_state(state)
 
 # Output
