@@ -320,6 +320,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("wyndham clark", "collin schauffele", "matt fitzpatrick", "rory mcilroy", "scottie scheffler", "shinnecock hills", "usga", "strokes gained", "approach play", "putting", "wind conditions", "thursday wave advantage", "moving day", "win probability", "regression to the mean"),
     summary = "Weather and course setup create unequal scoring conditions between AM/PM tee times, with Wyndham Clark's hot putter and approach game leading after two rounds."
   )
+,
+  list(
+    slug = "three-tournaments-one-model-lots",
+    keywords = c("kristoffer reitan", "aronimink", "rbc canadian open", "predictive model", "pre-tournament projection", "career baseline", "form mean", "stanger", "suber", "garnett", "potgieter", "shinnecock", "us open", "wyndham clark", "live scoring alerts"),
+    summary = "Model struggles when applying major-championship confidence to weaker field tournaments where top-ranked players don't separate."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
