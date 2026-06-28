@@ -328,6 +328,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("kristoffer reitan", "aronimink", "rbc canadian open", "predictive model", "pre-tournament projection", "career baseline", "form mean", "stanger", "suber", "garnett", "potgieter", "shinnecock", "us open", "wyndham clark", "live scoring alerts"),
     summary = "Model struggles when applying major-championship confidence to weaker field tournaments where top-ranked players don't separate."
   )
+,
+  list(
+    slug = "just-keep-tapping-just-keep-tapping",
+    keywords = c("wyndham clark", "us open", "shinnecock hills", "strokes-gained", "earnest ai agent", "heater alert", "live golf scoring", "openclaw", "sports analytics", "real-time alerts", "golf model", "content automation", "nfl season", "cowherd", "dane brugler"),
+    summary = "AI-powered alert system enables real-time sports content by flagging analytics-driven moments before they occur."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
