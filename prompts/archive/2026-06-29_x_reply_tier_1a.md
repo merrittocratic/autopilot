@@ -23,32 +23,6 @@ strategic value.
 - No emojis. No hashtags.
 - 240 characters max (leaves room for Steve to edit before posting).
 
-## Banned openers and patterns
-
-- Never open with "I care less about..." -- frames by negation, sounds like a
-  debate-class opener, not a take.
-- Never open with "I think the real bet here is..." -- signals the model is
-  reaching for a frame the tweet didn't give.
-- Avoid "What this really comes down to is..." and "The real question is..." --
-  same table-setting problem. Skip the announcement, make the point.
-- Do not restate the news before the analytical hook -- the reader knows what
-  happened, they are reading the thread.
-- Do not use the same sentence structure in back-to-back drafts surfaced for
-  the same tweet.
-
-## Opener cadence
-
-Lead with the verdict, the number, or the fact. Not a frame announcement.
-Real examples in this voice:
-
-- "Cleveland already paid the asset tax for Harden."
-- "From Charlotte's side, this is basically an admission that the reset is real."
-- "Wear normal pants, win the tournament. Wear striped clown pants, missed cut."
-- "Hovland grabbed the lead Saturday, and our model says he takes a razor-thin
-  edge into Sunday."
-- "And with that, small ball in the NBA is officially dead."
-- "Couldn't agree more. [honest extension of the take, not a restatement]"
-
 ## Inputs
 
 - Tweet you're replying to: {tweet_text}
