@@ -791,10 +791,15 @@ if ("--tier" %in% args) {
 state <- read_state()
 
 # Daily candidate cap (soft cap on total surfacings, separate from API reply cap)
+# 2026-06-29 — Allow run to continue when total cap is exhausted if reserved
+# 1A/1B slots have not yet been consumed. Without this, 1C newsbreaks can burn
+# the entire daily budget and leave no room for later 1A/1B candidates.
 if (!is.null(state$daily_candidate_count) &&
     state$daily_candidate_count >= MAX_CANDIDATES_PER_DAY) {
-  cat("[]")
-  quit(save = "no")
+  if (sum(remaining_reserved_slots(state)) <= 0L) {
+    cat("[]")
+    quit(save = "no")
+  }
 }
 
 token            <- build_token()
@@ -902,10 +907,15 @@ if (length(candidates) > 0) {
 
   # Combine and cap total at MAX_CANDIDATES_PER_DAY (less any already surfaced today),
   # while leaving daily room for reserved 1A/1B slots.
-  combined         <- c(engaged_candidates, cold_candidates)
-  surfaced_today   <- state$daily_candidate_count %||% 0
-  remaining_total  <- max(MAX_CANDIDATES_PER_DAY - surfaced_today, 0)
-  candidates       <- select_candidates_with_reservations(combined, remaining_total, state)
+  combined        <- c(engaged_candidates, cold_candidates)
+  surfaced_today  <- state$daily_candidate_count %||% 0
+  remaining_total <- max(MAX_CANDIDATES_PER_DAY - surfaced_today, 0)
+  # When total cap is exhausted but reserved slots remain, use reserved budget
+  # so select_candidates_with_reservations doesn't bail at remaining_total <= 0.
+  if (remaining_total == 0L) {
+    remaining_total <- sum(remaining_reserved_slots(state))
+  }
+  candidates      <- select_candidates_with_reservations(combined, remaining_total, state)
 }
 
 # Update seen tweets and daily candidate count
