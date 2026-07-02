@@ -334,6 +334,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("wyndham clark", "us open", "shinnecock hills", "strokes-gained", "earnest ai agent", "heater alert", "live golf scoring", "openclaw", "sports analytics", "real-time alerts", "golf model", "content automation", "nfl season", "cowherd", "dane brugler"),
     summary = "AI-powered alert system enables real-time sports content by flagging analytics-driven moments before they occur."
   )
+,
+  list(
+    slug = "burying-the-lead",
+    keywords = c("giannis antetokounmpo", "kawhi leonard", "lebron james", "ja morant", "aj dybantsa", "darryn peterson", "dusty may", "nba draft 2026", "nba offseason", "toronto raptors", "portland trail blazers", "washington wizards", "utah jazz", "morez johnson", "mara lendeborg"),
+    summary = "A chaotic NBA offseason sees blockbuster trades overshadow what was called an exceptional draft class."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
@@ -534,8 +540,7 @@ fetch_user_tweets <- function(user_id, username, token, since_hours = 3,
     exclude               = if (include_retweets) "replies" else "retweets,replies"
   )
   if (fetch_quotes) {
-    query_params[["expansions"]]              <- "referenced_tweets.id"
-    query_params[["referenced_tweets.fields"]] <- "text"
+    query_params[["expansions"]] <- "referenced_tweets.id"
   }
 
   resp <- GET(
