@@ -340,6 +340,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("giannis antetokounmpo", "kawhi leonard", "lebron james", "ja morant", "aj dybantsa", "darryn peterson", "dusty may", "nba draft 2026", "nba offseason", "toronto raptors", "portland trail blazers", "washington wizards", "utah jazz", "morez johnson", "mara lendeborg"),
     summary = "A chaotic NBA offseason sees blockbuster trades overshadow what was called an exceptional draft class."
   )
+,
+  list(
+    slug = "when-everyones-super-no-one-turns",
+    keywords = c("wnba", "caitlin clark", "adam silver", "indiana fever", "women's basketball profitability", "wnba revenue", "ticket sales", "merchandise", "television viewership", "nba ownership", "collective vs individual", "sports league economics", "cathy engelbert", "market capitalism", "women's sports business model"),
+    summary = "WNBA's subsidy model prioritizes collective equality over star player profits, unlike market-driven sports."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
