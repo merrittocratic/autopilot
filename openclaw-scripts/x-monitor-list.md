@@ -77,7 +77,7 @@ each line. Edit this file to promote/demote accounts.
 - @ChrisBHaynes — TNT/Bleacher Report
 
 ### Beat / analysis
-- @ZachLowe_NBA [tier:1A] — ESPN, best analytical narrative writer
+- @ZachLowe_NBA [tier:1B] — ESPN, best analytical narrative writer
 - @TimBontemps — ESPN
 - @TheSteinLine — Marc Stein, independent
 

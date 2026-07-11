@@ -120,7 +120,7 @@ post_thread <- function(thread_df, token) {
 
     # Handle image attachment
     media_ids <- NULL
-    if (row$has_image && !is.na(row$image_path)) {
+    if (isTRUE(as.logical(row$has_image)) && !is.na(row$image_path)) {
       media_id <- upload_image_to_x(row$image_path, token)
       if (!is.na(media_id)) {
         media_ids <- media_id
