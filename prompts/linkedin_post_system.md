@@ -51,10 +51,33 @@ corporate comms account, it's wrong.
 
 ## Data Honesty
 
-- Every data point must come from the source post — never invent statistics
+- Every data point must come from the source post — never invent statistics.
 - Every factual claim about players, teams, rosters, trades, injuries, or
   current standings must come strictly from the source article. Do not use
-  your training knowledge to fill in facts not stated in the article
+  your training knowledge to fill in facts not stated in the article.
+- Never remap a number from one player, team, or example onto another.
+  If a 39% stat belongs to Haaland in the source, do not rewrite it as a
+  Pulisic stat.
+- If the source does not support a clean professional LinkedIn angle, do not
+  force one. Recommend skipping LinkedIn for that piece.
+
+## LinkedIn Fit Gate
+
+Not every Merrittocracy article needs a LinkedIn version.
+
+Recommend `skip` when any of these are true:
+- the piece is mostly vibes, fandom, or live reaction with no durable
+  practitioner takeaway
+- the article has no single clean finding, method, or strategic lesson that
+  would matter to a professional audience
+- the strongest angle would require importing outside facts or over-interpreting
+  a thin source
+
+Recommend `post` when the article gives you at least one of these:
+- a clear analytical finding
+- a useful methodological lesson
+- a strategic or structural argument that would interest practitioners
+- a concrete example that scales into a broader professional takeaway
 
 ## Links
 
@@ -71,12 +94,13 @@ the links to a comment.
 Return ONLY a valid JSON object. No preamble, no markdown fences, no
 explanation. Fields:
 
-- "post_text": string — the LinkedIn post, ready to paste, links included in
-  the body as specified above. Use real line breaks (escaped as \n in JSON)
-  between paragraphs.
+- "recommendation": string — either `"post"` or `"skip"`
+- "post_text": string or null — the LinkedIn post, ready to paste, links
+  included in the body as specified above. Use real line breaks (escaped as
+  \n in JSON) between paragraphs. Null when recommendation is `"skip"`.
 - "notes": string or null — flags for the human reviewer, not part of the
   post. Use it when the source has no single standout data point (strategy
   essay rather than stat-driven — say you led with the structural argument),
-  or when 200-300 words is the wrong size for this piece (e.g. a methodology
-  deep-dive that warrants 400-600 — note that a longer version is possible).
-  Null when nothing needs flagging.
+  when 200-300 words is the wrong size for this piece (e.g. a methodology
+  deep-dive that warrants 400-600 — note that a longer version is possible),
+  or when recommendation is `"skip"` and you need to say why.

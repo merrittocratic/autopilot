@@ -96,20 +96,30 @@ if (mode == "--check") {
       tryCatch({
         li_post <- draft_linkedin_post(summary)
 
-        if (!is.null(li_post)) {
+        if (!is.null(li_post) && identical(li_post$recommendation[[1]], "post")) {
           hero_url <- fetch_hero_image_url(content$link)
           write_to_linkedin_queue(li_post, content, image_url = hero_url)
 
           # Separate message from the X one — Earnest parses replies to that
           # one for tweet approval; LinkedIn approval happens in the Sheet
-          flag_line <- if (!is.na(li_post$notes)) {
-            glue("\nFlag: {li_post$notes}\n")
+          flag_line <- if (!is.na(li_post$notes[[1]])) {
+            glue("\nFlag: {li_post$notes[[1]]}\n")
           } else ""
           notify_telegram(glue(
             "\U0001F4BC *LinkedIn draft: {post$title}*\n\n",
-            "{li_post$post_text}\n",
+            "{li_post$post_text[[1]]}\n",
             "{flag_line}\n",
-            "Approve in the Sheet (linkedin tab) to post."
+            "Reply `post linkedin` to approve, `skip linkedin` to reject, or send edits here."
+          ))
+        } else if (!is.null(li_post) && identical(li_post$recommendation[[1]], "skip")) {
+          cli_alert_info("LinkedIn skipped for: {post$title}")
+          log_event("linkedin_skip", "LinkedIn skipped by recommendation",
+                    list(post_id = post$post_id, title = post$title,
+                         notes = li_post$notes[[1]] %||% NA_character_))
+          notify_telegram(glue(
+            "\U0001F6AB *LinkedIn skip recommendation: {post$title}*\n\n",
+            "{coalesce(li_post$notes[[1]], 'No LinkedIn angle strong enough to queue safely.')}\n\n",
+            "Reply `draft linkedin anyway` if you want me to queue it despite the skip recommendation."
           ))
         } else {
           cli_alert_danger("LinkedIn drafting failed for: {post$title}")

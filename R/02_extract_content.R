@@ -181,6 +181,8 @@ summarize_for_thread <- function(content) {
     hook       = content$hook,
     headers    = content$headers,
     word_count = content$word_count,
+    full_text  = content$full_text,
+    paragraphs = content$paragraphs,
     # First sentence of each paragraph — gives the LLM the argument skeleton
     skeleton   = map_chr(content$paragraphs, \(p) {
       sentences <- str_split(p, "(?<=[.!?])\\s+")[[1]]
