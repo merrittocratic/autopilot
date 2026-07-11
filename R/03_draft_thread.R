@@ -1,5 +1,8 @@
 # ============================================================================
 # 03_draft_thread.R — Generate X thread draft via Claude API
+# 2026-07-11: t.co-aware char validation (every URL counts as 23 chars) —
+#             matches the substack-to-x skill's budget math; prompt now
+#             defaults to a single post instead of a 3-5 tweet thread
 # ============================================================================
 # Takes extracted post content, sends it to Claude with the Merrittocracy
 # voice prompt, and returns a structured thread ready for the review queue.
@@ -101,6 +104,17 @@ Do NOT include any text outside the JSON array. No preamble, no explanation.
   thread
 }
 
+# --- t.co-aware character count ----------------------------------------------
+# X replaces every URL with a 23-char t.co link before counting toward 280
+
+x_effective_chars <- function(text) {
+  map_int(text, \(t) {
+    urls <- str_extract_all(t, "https?://\\S+|\\b[\\w.-]+\\.[a-z]{2,}/\\S*")[[1]]
+    nchar(str_remove_all(t, "https?://\\S+|\\b[\\w.-]+\\.[a-z]{2,}/\\S*")) +
+      23L * length(urls)
+  })
+}
+
 # --- Response parsing and validation -----------------------------------------
 
 parse_thread_response <- function(raw_response, post_link) {
@@ -141,10 +155,11 @@ parse_thread_response <- function(raw_response, post_link) {
     thread$is_link_tweet <- FALSE
   }
 
-  # Validate character counts
+  # Validate character counts — X wraps every URL in t.co, so a link costs
+  # exactly 23 chars regardless of printed length. Count what X will count.
   thread <- thread |>
     mutate(
-      char_count = nchar(text),
+      char_count = x_effective_chars(text),
       over_limit = char_count > X_CHAR_LIMIT
     )
 
@@ -167,7 +182,7 @@ parse_thread_response <- function(raw_response, post_link) {
     )
     thread$is_link_tweet[nrow(thread)] <- TRUE
     # Recompute char count
-    thread$char_count[nrow(thread)] <- nchar(thread$text[nrow(thread)])
+    thread$char_count[nrow(thread)] <- x_effective_chars(thread$text[nrow(thread)])
   }
 
   cli_alert_success("Thread drafted: {nrow(thread)} tweets")

@@ -1,5 +1,6 @@
 # ============================================================================
 # 00_config.R — Constants, packages, and path configuration
+# 2026-07-11: Add Zernio (LinkedIn) config — API base, key getters, char limit
 # ============================================================================
 # Merrittocracy Autopilot
 # Distribution automation for Substack → X pipeline
@@ -91,6 +92,21 @@ get_x_api_secret <- function() Sys.getenv("X_API_SECRET", unset = "")
 get_x_access_token <- function() Sys.getenv("X_ACCESS_TOKEN", unset = "")
 get_x_access_secret <- function() Sys.getenv("X_ACCESS_SECRET", unset = "")
 
+# Zernio — aggregator that holds the LinkedIn OAuth connection (see 05b)
+ZERNIO_API_BASE <- "https://zernio.com/api/v1"
+
+get_zernio_api_key <- function() {
+  key <- Sys.getenv("ZERNIO_API_KEY", unset = "")
+  if (key == "") cli_abort("ZERNIO_API_KEY not set. Check your .env file.")
+  key
+}
+
+get_zernio_linkedin_account_id <- function() {
+  id <- Sys.getenv("ZERNIO_LINKEDIN_ACCOUNT_ID", unset = "")
+  if (id == "") cli_abort("ZERNIO_LINKEDIN_ACCOUNT_ID not set. Check your .env file.")
+  id
+}
+
 # --- Thread defaults ---------------------------------------------------------
 
 # Max characters per tweet (X limit)
@@ -99,6 +115,9 @@ X_CHAR_LIMIT <- 280
 # Target thread length
 THREAD_MIN_TWEETS <- 3
 THREAD_MAX_TWEETS <- 6
+
+# LinkedIn post limit — LinkedIn allows 3,000; keep headroom for safety
+LINKEDIN_CHAR_LIMIT <- 2900
 
 # --- Scheduling defaults -----------------------------------------------------
 

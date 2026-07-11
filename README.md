@@ -104,6 +104,34 @@ The check job runs every 15 minutes. The post job runs every 5 minutes but only 
 
 Total human effort per post: ~30 seconds of review on your phone.
 
+## LinkedIn Channel (via Zernio)
+
+Each new Substack post also gets a LinkedIn draft: a single ~200-300 word
+post for the professional audience (voice prompt:
+`prompts/linkedin_post_system.md`), with the article link and the X profile
+link in the post body. Body links trade some algorithmic reach for
+click-through simplicity — that's a deliberate Merrittocracy call, not an
+oversight. Drafts land in the `linkedin` tab of the same review sheet as `pending`;
+flip to `approved` and the next `--post` run publishes to the personal
+LinkedIn profile through the [Zernio](https://zernio.com) API, which holds
+the LinkedIn OAuth connection.
+
+One-time setup:
+
+1. Create a Zernio account (free tier: 2 connected accounts, full API access)
+2. In the Zernio dashboard, connect the LinkedIn account (choose **personal
+   profile**, not organization, during the OAuth step)
+3. Settings -> API Keys -> create a key (`sk_...`) and put it in `.env` as
+   `ZERNIO_API_KEY`
+4. Copy the connected LinkedIn account's ID into `.env` as
+   `ZERNIO_LINKEDIN_ACCOUNT_ID`
+
+Operational note: Zernio cannot renew a dead LinkedIn token headlessly. If
+the connection expires, the pipeline detects it (health check before every
+posting run), holds approved posts, and pings Telegram — reconnect in the
+Zernio dashboard and the next run resumes. Expect this occasionally
+(LinkedIn tokens are short-lived by policy).
+
 ## Manual Override
 
 You can always skip the automation and post manually. The pipeline only processes posts it hasn't seen before (tracked in `data/feed_state.json`), and it only posts threads marked "approved" in the sheet. If you want to draft a thread manually, just mark the automated draft as "rejected" in the notes column and write your own.
@@ -117,11 +145,15 @@ autopilot/
 │   ├── 01_feed_check.R
 │   ├── 02_extract_content.R
 │   ├── 03_draft_thread.R
+│   ├── 03b_draft_linkedin.R
 │   ├── 04_queue_write.R
+│   ├── 04b_queue_linkedin.R
 │   ├── 05_post_to_x.R
+│   ├── 05b_post_to_linkedin.R
 │   └── 06_log_run.R
 ├── prompts/
-│   └── thread_draft_system.md
+│   ├── thread_draft_system.md
+│   └── linkedin_post_system.md
 ├── launchd/
 │   ├── com.merrittocratic.autopilot.check.plist
 │   └── com.merrittocratic.autopilot.post.plist

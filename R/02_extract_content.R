@@ -1,5 +1,7 @@
 # ============================================================================
 # 02_extract_content.R — Extract structured content from Substack post HTML
+# 2026-07-11: Split fetch_hero_image_url() out of fetch_hero_image() — Zernio
+#             (LinkedIn) attaches images by public URL, not local file
 # 2026-04-18: Add fetch_hero_image() — og:image from post page as image_paths[1]
 # ============================================================================
 # Takes the raw HTML content from the RSS feed and extracts:
@@ -72,7 +74,7 @@ extract_post_content <- function(post_row) {
 # Substack always populates this from the cover image set in the editor UI.
 # Returns the local path, or NA if unavailable.
 
-fetch_hero_image <- function(post_url, post_dir) {
+fetch_hero_image_url <- function(post_url) {
   tryCatch({
     page_html <- request(post_url) |>
       req_headers("User-Agent" = "Merrittocracy-Autopilot/1.0") |>
@@ -89,6 +91,18 @@ fetch_hero_image <- function(post_url, post_dir) {
       cli_alert_info("No og:image found on post page")
       return(NA_character_)
     }
+
+    og_url
+  }, error = function(e) {
+    cli_alert_warning("Failed to fetch og:image URL: {e$message}")
+    NA_character_
+  })
+}
+
+fetch_hero_image <- function(post_url, post_dir) {
+  tryCatch({
+    og_url <- fetch_hero_image_url(post_url)
+    if (is.na(og_url)) return(NA_character_)
 
     ext <- str_extract(og_url, "\\.(png|jpg|jpeg|webp)") |> coalesce(".jpg")
     local_path <- file.path(post_dir, glue("hero{ext}"))
