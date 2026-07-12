@@ -346,6 +346,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("wnba", "caitlin clark", "adam silver", "indiana fever", "women's basketball profitability", "wnba revenue", "ticket sales", "merchandise", "television viewership", "nba ownership", "collective vs individual", "sports league economics", "cathy engelbert", "market capitalism", "women's sports business model"),
     summary = "WNBA's subsidy model prioritizes collective equality over star player profits, unlike market-driven sports."
   )
+,
+  list(
+    slug = "am-i-a-soccer-guy-now",
+    keywords = c("erling haaland", "world cup 2026", "norway", "christian pulisic", "usa soccer", "conversion rate", "gary lineker", "brazil elimination", "soccer analytics", "touches-per-goal", "quarterfinal", "american soccer pipeline", "world cup scoring", "belgium", "captain america"),
+    summary = "A data-driven analyst questions why the U.S. lacks a generational soccer talent like Erling Haaland to compete on the World Cup stage."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
