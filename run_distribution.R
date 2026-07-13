@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 # ============================================================================
 # run_distribution.R — Main orchestration script
+# 2026-07-13: Log all LinkedIn drafts and route approvals through Telegram
 # 2026-07-11: Add LinkedIn channel — draft in --check, Zernio post in --post
 # ============================================================================
 # This is the entry point called by launchd (or manually).
@@ -98,28 +99,41 @@ if (mode == "--check") {
 
         if (!is.null(li_post) && identical(li_post$recommendation[[1]], "post")) {
           hero_url <- fetch_hero_image_url(content$link)
-          write_to_linkedin_queue(li_post, content, image_url = hero_url)
+          write_to_linkedin_queue(
+            li_post,
+            content,
+            image_url = hero_url,
+            initial_status = "pending"
+          )
 
-          # Separate message from the X one — Earnest parses replies to that
-          # one for tweet approval; LinkedIn approval happens in the Sheet
-          flag_line <- if (!is.na(li_post$notes[[1]])) {
+          flag_line <- if (!is.na(li_post$notes[[1]]) && nzchar(li_post$notes[[1]])) {
             glue("\nFlag: {li_post$notes[[1]]}\n")
           } else ""
           notify_telegram(glue(
-            "\U0001F4BC *LinkedIn draft: {post$title}*\n\n",
+            "\U0001F4BC *LinkedIn draft: {post$title}*\n",
+            "ID: `{post$post_id}`\n\n",
             "{li_post$post_text[[1]]}\n",
             "{flag_line}\n",
-            "Reply `post linkedin` to approve, `skip linkedin` to reject, or send edits here."
+            "Reply `post linkedin {post$post_id}` to publish, `skip linkedin {post$post_id}` to reject, or `edit linkedin {post$post_id}: ...` with your changes."
           ))
         } else if (!is.null(li_post) && identical(li_post$recommendation[[1]], "skip")) {
-          cli_alert_info("LinkedIn skipped for: {post$title}")
-          log_event("linkedin_skip", "LinkedIn skipped by recommendation",
+          cli_alert_info("LinkedIn held for: {post$title}")
+          hero_url <- fetch_hero_image_url(content$link)
+          write_to_linkedin_queue(
+            li_post,
+            content,
+            image_url = hero_url,
+            initial_status = "skip_recommended"
+          )
+          log_event("linkedin_skip", "LinkedIn held by recommendation",
                     list(post_id = post$post_id, title = post$title,
                          notes = li_post$notes[[1]] %||% NA_character_))
           notify_telegram(glue(
-            "\U0001F6AB *LinkedIn skip recommendation: {post$title}*\n\n",
-            "{coalesce(li_post$notes[[1]], 'No LinkedIn angle strong enough to queue safely.')}\n\n",
-            "Reply `draft linkedin anyway` if you want me to queue it despite the skip recommendation."
+            "\U0001F6AB *LinkedIn draft held: {post$title}*\n",
+            "ID: `{post$post_id}`\n\n",
+            "{li_post$post_text[[1]]}\n\n",
+            "Reason: {coalesce(li_post$notes[[1]], 'No LinkedIn angle strong enough to queue safely.')}\n\n",
+            "Reply `post linkedin {post$post_id}` to publish anyway, `skip linkedin {post$post_id}` to log the pass, or `edit linkedin {post$post_id}: ...` with a rewrite."
           ))
         } else {
           cli_alert_danger("LinkedIn drafting failed for: {post$title}")

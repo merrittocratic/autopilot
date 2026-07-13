@@ -81,6 +81,11 @@ Weekly summary digest.
 ### `draft-expiry-nudge.R` / `draft-expiry-nudge.sh`
 Reminds Steve about pending drafts in the Google Sheet that are aging out.
 
+### `linkedin-review.R` / `linkedin-review.sh`
+Telegram-driven LinkedIn review helper. Earnest calls this to show, edit,
+approve/post, or reject the latest queued LinkedIn draft while keeping the
+LinkedIn sheet tab as an audit log.
+
 ### `check-pending-drafts.sh`
 Reads the Google Sheet queue for pending tweet drafts. Called by an
 OpenClaw cron job on the Mac Mini.

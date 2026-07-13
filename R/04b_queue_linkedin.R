@@ -1,13 +1,14 @@
 # ============================================================================
 # 04b_queue_linkedin.R — LinkedIn tab of the Google Sheet review queue
+# 2026-07-13: Add Telegram-driven audit/log helpers for inline LinkedIn review
 # 2026-07-11b: Drop first_comment column (links now live in post body per
 #              substack-to-linkedin skill); model flags land in notes
 # 2026-07-11: Initial version — LinkedIn distribution channel (posts via Zernio)
 # ============================================================================
-# Same approval model as the X queue: drafts land as "pending", only rows a
-# human flips to "approved" get posted. One row per post (LinkedIn is a single
-# post, not a thread). Lives in the same spreadsheet as the X queue, on a
-# separate "linkedin" tab so the column schema can differ.
+# LinkedIn drafts are logged here as one row per post. Telegram is the primary
+# approval surface; the sheet is the audit trail and fallback posting queue.
+# Lives in the same spreadsheet as the X queue, on a separate "linkedin" tab so
+# the column schema can differ.
 # ============================================================================
 
 source(here::here("R", "00_config.R"))
@@ -18,6 +19,21 @@ source(here::here("R", "00_config.R"))
 # K linkedin_post_id | L notes
 
 LINKEDIN_SHEET_TAB <- "linkedin"
+
+LINKEDIN_COLS <- c(
+  post_id          = "A",
+  title            = "B",
+  post_link        = "C",
+  post_text        = "D",
+  char_count       = "E",
+  image_url        = "F",
+  status           = "G",
+  created_at       = "H",
+  approved_at      = "I",
+  posted_at        = "J",
+  linkedin_post_id = "K",
+  notes            = "L"
+)
 
 linkedin_queue_schema <- function() {
   tibble(
@@ -55,7 +71,8 @@ ensure_linkedin_tab <- function() {
 
 # --- Queue operations ---------------------------------------------------------
 
-write_to_linkedin_queue <- function(li_post, content, image_url = NA_character_) {
+write_to_linkedin_queue <- function(li_post, content, image_url = NA_character_,
+                                    initial_status = "pending") {
   sheet_id <- ensure_linkedin_tab()
 
   cli_h2("Writing LinkedIn draft to review queue")
@@ -67,7 +84,7 @@ write_to_linkedin_queue <- function(li_post, content, image_url = NA_character_)
     post_text        = li_post$post_text,
     char_count       = li_post$char_count,
     image_url        = image_url,
-    status           = "pending",
+    status           = initial_status,
     created_at       = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
     approved_at      = NA_character_,
     posted_at        = NA_character_,
@@ -85,9 +102,9 @@ write_to_linkedin_queue <- function(li_post, content, image_url = NA_character_)
   invisible(queue_row)
 }
 
-# --- Read approved posts --------------------------------------------------------
+# --- Queue reads ----------------------------------------------------------------
 
-read_approved_linkedin <- function() {
+read_linkedin_queue <- function() {
   sheet_id <- Sys.getenv("REVIEW_SHEET_ID", unset = "")
   if (sheet_id == "") {
     cli_abort("REVIEW_SHEET_ID not set.")
@@ -95,19 +112,55 @@ read_approved_linkedin <- function() {
 
   if (!LINKEDIN_SHEET_TAB %in% sheet_names(sheet_id)) {
     cli_alert_info("No LinkedIn tab yet — nothing queued")
+    return(linkedin_queue_schema())
+  }
+
+  read_sheet(sheet_id, sheet = LINKEDIN_SHEET_TAB, col_types = "c")
+}
+
+read_linkedin_rows <- function(statuses = NULL) {
+  queue <- read_linkedin_queue()
+
+  if (nrow(queue) == 0 || is.null(statuses)) {
+    return(queue)
+  }
+
+  queue |>
+    filter(status %in% statuses)
+}
+
+get_linkedin_row <- function(post_id) {
+  queue <- read_linkedin_queue()
+
+  queue |>
+    filter(post_id == !!post_id) |>
+    slice_tail(n = 1)
+}
+
+latest_linkedin_row <- function(statuses = c("pending", "skip_recommended", "approved")) {
+  queue <- read_linkedin_rows(statuses)
+
+  if (nrow(queue) == 0) {
     return(tibble())
   }
 
-  queue <- read_sheet(sheet_id, sheet = LINKEDIN_SHEET_TAB,
-                      col_types = "c")  # everything as character; parse as needed
+  queue |>
+    mutate(.row_n = row_number()) |>
+    slice_max(order_by = .row_n, n = 1, with_ties = FALSE) |>
+    select(-.row_n)
+}
+
+# --- Read approved posts --------------------------------------------------------
+
+read_approved_linkedin <- function() {
+  queue <- read_linkedin_queue()
 
   if (nrow(queue) == 0) {
     cli_alert_info("LinkedIn queue is empty")
     return(tibble())
   }
 
-  approved <- queue |>
-    filter(status == "approved")
+  approved <- read_linkedin_rows("approved")
 
   if (nrow(approved) == 0) {
     cli_alert_info("No approved LinkedIn posts in queue")
@@ -120,13 +173,15 @@ read_approved_linkedin <- function() {
   approved
 }
 
-# --- Update status after posting -----------------------------------------------
+# --- Targeted cell updates ------------------------------------------------------
 
-update_linkedin_status <- function(post_id, new_status,
-                                   linkedin_post_id = NA_character_) {
+update_linkedin_fields <- function(post_id, fields) {
+  if (length(fields) == 0) {
+    return(invisible(TRUE))
+  }
+
   sheet_id <- Sys.getenv("REVIEW_SHEET_ID", unset = "")
-
-  queue <- read_sheet(sheet_id, sheet = LINKEDIN_SHEET_TAB, col_types = "c")
+  queue <- read_linkedin_queue()
 
   row_idx <- which(queue$post_id == post_id)
 
@@ -135,47 +190,74 @@ update_linkedin_status <- function(post_id, new_status,
     return(invisible(FALSE))
   }
   if (length(row_idx) > 1) {
-    # Shouldn't happen (one row per post) — update the most recent, flag it
     cli_alert_warning("{length(row_idx)} LinkedIn rows for post {post_id} — updating latest")
     row_idx <- max(row_idx)
   }
 
-  # Status (column G)
-  range_write(
-    sheet_id,
-    data = tibble(status = new_status),
-    sheet = LINKEDIN_SHEET_TAB,
-    range = glue("G{row_idx + 1}"),  # +1 for header row
-    col_names = FALSE
-  )
+  unknown_fields <- setdiff(names(fields), names(LINKEDIN_COLS))
+  if (length(unknown_fields) > 0) {
+    cli_abort("Unknown LinkedIn field(s): {toString(unknown_fields)}")
+  }
 
-  # Timestamp column, if the status carries one
-  timestamp_col <- switch(new_status,
-    "approved" = "I",
-    "posted"   = "J",
+  walk(names(fields), \(field_name) {
+    range_write(
+      sheet_id,
+      data = tibble(value = fields[[field_name]]),
+      sheet = LINKEDIN_SHEET_TAB,
+      range = glue("{LINKEDIN_COLS[[field_name]]}{row_idx + 1}"),
+      col_names = FALSE
+    )
+  })
+
+  invisible(TRUE)
+}
+
+append_linkedin_note <- function(post_id, note) {
+  row <- get_linkedin_row(post_id)
+
+  if (nrow(row) == 0) {
+    cli_alert_warning("No LinkedIn queue row for post {post_id}")
+    return(invisible(FALSE))
+  }
+
+  existing <- row$notes[[1]]
+  merged <- if (is.na(existing) || !nzchar(existing)) {
+    note
+  } else {
+    paste(existing, note, sep = "\n")
+  }
+
+  update_linkedin_fields(post_id, list(notes = merged))
+  invisible(merged)
+}
+
+# --- Update status after posting -----------------------------------------------
+
+update_linkedin_status <- function(post_id, new_status,
+                                   linkedin_post_id = NA_character_,
+                                   note = NA_character_) {
+  fields <- list(status = new_status)
+
+  timestamp_field <- switch(new_status,
+    "approved" = "approved_at",
+    "posted"   = "posted_at",
     NULL
   )
-  if (!is.null(timestamp_col)) {
-    range_write(
-      sheet_id,
-      data = tibble(ts = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
-      sheet = LINKEDIN_SHEET_TAB,
-      range = glue("{timestamp_col}{row_idx + 1}"),
-      col_names = FALSE
-    )
+
+  if (!is.null(timestamp_field)) {
+    fields[[timestamp_field]] <- format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
   }
 
-  # Zernio post id (column K)
   if (!is.na(linkedin_post_id)) {
-    range_write(
-      sheet_id,
-      data = tibble(linkedin_post_id = linkedin_post_id),
-      sheet = LINKEDIN_SHEET_TAB,
-      range = glue("K{row_idx + 1}"),
-      col_names = FALSE
-    )
+    fields$linkedin_post_id <- linkedin_post_id
   }
+
+  if (!is.na(note)) {
+    fields$notes <- note
+  }
+
+  ok <- update_linkedin_fields(post_id, fields)
 
   cli_alert_success("LinkedIn post {post_id} -> {new_status}")
-  invisible(TRUE)
+  invisible(ok)
 }

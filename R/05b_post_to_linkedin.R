@@ -1,5 +1,6 @@
 # ============================================================================
 # 05b_post_to_linkedin.R — Post approved LinkedIn drafts via Zernio API
+# 2026-07-13: Add single-draft posting helper for Telegram approval flow
 # 2026-07-11b: Drop firstComment — links live in post body per
 #              substack-to-linkedin skill (explicit Merrittocracy call)
 # 2026-07-11: Initial version — LinkedIn distribution channel
@@ -128,14 +129,10 @@ post_linkedin_via_zernio <- function(post_text, image_url = NA_character_) {
   NULL
 }
 
-# --- Main: post all approved LinkedIn drafts -----------------------------------
+# --- Shared posting worker ------------------------------------------------------
 
-post_approved_linkedin <- function() {
-  cli_h1("Checking for approved LinkedIn posts")
-
-  approved <- read_approved_linkedin()
-
-  if (nrow(approved) == 0) {
+post_linkedin_rows <- function(rows) {
+  if (nrow(rows) == 0) {
     cli_alert_info("Nothing to post to LinkedIn")
     return(invisible(NULL))
   }
@@ -146,7 +143,7 @@ post_approved_linkedin <- function() {
   }
 
   pwalk(
-    approved |> select(post_id, title, post_text, image_url),
+    rows |> select(post_id, title, post_text, image_url),
     \(post_id, title, post_text, image_url) {
       cli_h2("Posting to LinkedIn: {title}")
 
@@ -166,4 +163,31 @@ post_approved_linkedin <- function() {
       }
     }
   )
+}
+
+post_selected_linkedin <- function(post_id) {
+  rows <- read_linkedin_rows("approved") |>
+    filter(post_id == !!post_id)
+
+  if (nrow(rows) == 0) {
+    cli_alert_warning("No approved LinkedIn draft found for post {post_id}")
+    return(invisible(NULL))
+  }
+
+  post_linkedin_rows(rows)
+}
+
+# --- Main: post all approved LinkedIn drafts -----------------------------------
+
+post_approved_linkedin <- function() {
+  cli_h1("Checking for approved LinkedIn posts")
+
+  approved <- read_approved_linkedin()
+
+  if (nrow(approved) == 0) {
+    cli_alert_info("Nothing to post to LinkedIn")
+    return(invisible(NULL))
+  }
+
+  post_linkedin_rows(approved)
 }

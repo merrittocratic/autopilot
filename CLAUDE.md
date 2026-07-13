@@ -26,11 +26,14 @@ project is fully separate. Preferences:
 ## Architecture Decisions (Locked In)
 
 ### Approval-Gated, Not Default-Off
-The pipeline's safety model is a **human approval checkpoint in the Google Sheet**,
-not a global posting disable flag. Drafts are written with status `pending`.
-Only threads marked `approved` are posted. This is the layered defense — do not
-propose adding a second global on/off switch on top of it. The approval column
-is the switch.
+The pipeline's safety model is a **human approval checkpoint before publish**,
+not a global posting disable flag.
+- **X threads:** Google Sheet remains the approval surface. Drafts are written
+  with status `pending`, and only rows marked `approved` are posted.
+- **LinkedIn posts:** Telegram is the approval surface. Drafts are still logged
+  to the `linkedin` sheet tab, but the sheet is the audit trail/fallback queue,
+  not the primary action layer.
+Do not propose adding a second global on/off switch on top of this.
 
 ### Script Ordering and Naming
 Numbered `NN_verb_object.R` pattern. Current pipeline:
