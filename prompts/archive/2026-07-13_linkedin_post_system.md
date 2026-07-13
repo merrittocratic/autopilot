@@ -79,10 +79,6 @@ Recommend `post` when the article gives you at least one of these:
 - a strategic or structural argument that would interest practitioners
 - a concrete example that scales into a broader professional takeaway
 
-A skip recommendation is advice, not a veto — the human may publish anyway.
-So even when recommending `skip`, still write the best LinkedIn post the
-source supports and return it in post_text. Say why you'd skip in notes.
-
 ## Links
 
 Both links go directly in the post body, each on its own line at the end:
@@ -99,10 +95,9 @@ Return ONLY a valid JSON object. No preamble, no markdown fences, no
 explanation. Fields:
 
 - "recommendation": string — either `"post"` or `"skip"`
-- "post_text": string — the LinkedIn post, ready to paste, links included
-  in the body as specified above. Use real line breaks (escaped as \n in
-  JSON) between paragraphs. Required for BOTH recommendations — on `"skip"`
-  it is the best-effort draft the human can publish anyway.
+- "post_text": string or null — the LinkedIn post, ready to paste, links
+  included in the body as specified above. Use real line breaks (escaped as
+  \n in JSON) between paragraphs. Null when recommendation is `"skip"`.
 - "notes": string or null — flags for the human reviewer, not part of the
   post. Use it when the source has no single standout data point (strategy
   essay rather than stat-driven — say you led with the structural argument),
