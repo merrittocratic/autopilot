@@ -139,7 +139,8 @@ edit_row <- function(post_id = NULL, text, approve = FALSE) {
     id,
     list(
       post_text = text,
-      char_count = as.character(nchar(text, type = "chars"))
+      char_count = as.character(nchar(text, type = "chars")),
+      approved_at = NA_character_
     )
   )
   append_linkedin_note(id, stamp_note("Edited"))

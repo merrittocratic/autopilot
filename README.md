@@ -1,12 +1,12 @@
 # Merrittocracy Autopilot
 
-Distribution automation for the Merrittocracy sports analytics brand. Takes a published Substack post and produces a reviewed, approved X thread — with a single human approval step in between.
+Distribution automation for the Merrittocracy sports analytics brand. Takes a published Substack post and produces reviewed, approval-gated social drafts — with Telegram as the day-to-day action layer and Google Sheets as the audit log.
 
 ## What This Does
 
 ```
 Substack RSS → detect new post → extract content → Claude drafts thread
-    → Google Sheet review queue → you approve → posts to X as reply chain
+    → Google Sheet audit log → Telegram approval/edit → posts to X as reply chain
 ```
 
 The automation handles the mechanical parts of distribution. The human handles voice and judgment.
@@ -19,7 +19,7 @@ The automation handles the mechanical parts of distribution. The human handles v
 | `01_feed_check.R` | Polls Substack RSS, detects new posts, manages feed state |
 | `02_extract_content.R` | Extracts title, hook, images, data points from post HTML |
 | `03_draft_thread.R` | Calls Claude API with Merrittocracy voice prompt, returns structured thread |
-| `04_queue_write.R` | Writes draft thread to Google Sheet for review |
+| `04_queue_write.R` | Writes draft thread to Google Sheet audit log / fallback queue |
 | `05_post_to_x.R` | Posts approved threads to X as reply chains via API v2 |
 | `06_log_run.R` | Pipeline diagnostics, log reading, history export |
 | `run_distribution.R` | Main entry point with `--check`, `--post`, `--status`, `--backfill` modes |
@@ -92,14 +92,14 @@ launchctl load ~/Library/LaunchAgents/com.merrittocratic.autopilot.post.plist
 launchctl list | grep merrittocratic
 ```
 
-The check job runs every 15 minutes. The post job runs every 5 minutes but only does anything when approved items exist in the queue.
+The check job runs every 15 minutes. The post job runs every 5 minutes as a fallback path when approved items exist in the queue.
 
 ## Workflow
 
 1. Publish a Substack post as normal
 2. Within 15 minutes, the pipeline detects it, extracts content, and drafts a thread via Claude
-3. Telegram sends the full thread inline — review the tweets there, then open the Google Sheet to edit text if needed and change status from "pending" to "approved"
-4. Within 5 minutes, the pipeline picks up the approved thread and posts it to X as a reply chain
+3. Telegram sends the full thread inline with a `post thread <post_id> ...` / `skip thread <post_id>` / `edit thread <post_id> ...` action pattern
+4. Earnest logs your decision to the Sheet and posts immediately when you approve
 5. The sheet updates with tweet IDs and timestamps
 
 Total human effort per post: ~30 seconds of review on your phone.
@@ -111,10 +111,11 @@ post for the professional audience (voice prompt:
 `prompts/linkedin_post_system.md`), with the article link and the X profile
 link in the post body. Body links trade some algorithmic reach for
 click-through simplicity — that's a deliberate Merrittocracy call, not an
-oversight. Drafts land in the `linkedin` tab of the same review sheet as `pending`;
-flip to `approved` and the next `--post` run publishes to the personal
-LinkedIn profile through the [Zernio](https://zernio.com) API, which holds
-the LinkedIn OAuth connection.
+oversight. Drafts land in the `linkedin` tab of the same review sheet for
+logging, but Telegram is the approval surface; approve/reject/edit there and
+Earnest logs the result before publishing to the personal LinkedIn profile
+through the [Zernio](https://zernio.com) API, which holds the LinkedIn OAuth
+connection.
 
 One-time setup:
 
@@ -134,7 +135,7 @@ Zernio dashboard and the next run resumes. Expect this occasionally
 
 ## Manual Override
 
-You can always skip the automation and post manually. The pipeline only processes posts it hasn't seen before (tracked in `data/feed_state.json`), and it only posts threads marked "approved" in the sheet. If you want to draft a thread manually, just mark the automated draft as "rejected" in the notes column and write your own.
+You can always skip the automation and post manually. The pipeline only processes posts it hasn't seen before (tracked in `data/feed_state.json`), and it only posts threads/posts after an explicit approval action. If you want to draft manually, reject the automated draft in Telegram and write your own; the Sheet remains the log of what happened.
 
 ## Repo Structure
 

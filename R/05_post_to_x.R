@@ -1,5 +1,6 @@
 # ============================================================================
 # 05_post_to_x.R — Post approved threads to X via API v2
+# 2026-07-13: Add single-thread posting helper for Telegram approval flow
 # 2026-04-18: Fix OAuth — drop manual HMAC signing; use httr v1 Token1.0$new()
 #             which has battle-tested OAuth 1.0a support with pre-obtained tokens
 # ============================================================================
@@ -160,6 +161,42 @@ post_thread <- function(thread_df, token) {
   posted_ids
 }
 
+# --- Shared posting worker ---------------------------------------------------
+
+post_thread_rows <- function(rows) {
+  if (nrow(rows) == 0) {
+    cli_alert_info("Nothing to post")
+    return(invisible(NULL))
+  }
+
+  token <- build_x_auth()
+
+  rows |>
+    group_split(post_id) |>
+    walk(\(thread_df) {
+      tryCatch(
+        post_thread(thread_df, token),
+        error = function(e) {
+          cli_alert_danger("Failed to post thread: {e$message}")
+          log_event("post_error", e$message,
+                    list(post_id = thread_df$post_id[1]))
+        }
+      )
+    })
+}
+
+post_selected_thread <- function(post_id) {
+  rows <- read_queue_rows("approved") |>
+    filter(post_id == !!post_id)
+
+  if (nrow(rows) == 0) {
+    cli_alert_warning("No approved thread found for post {post_id}")
+    return(invisible(NULL))
+  }
+
+  post_thread_rows(rows)
+}
+
 # --- Main: post all approved threads -----------------------------------------
 
 post_approved_threads <- function() {
@@ -172,19 +209,5 @@ post_approved_threads <- function() {
     return(invisible(NULL))
   }
 
-  token <- build_x_auth()
-
-  # Group by post_id and post each thread
-  approved |>
-    group_split(post_id) |>
-    walk(\(thread_df) {
-      tryCatch(
-        post_thread(thread_df, token),
-        error = function(e) {
-          cli_alert_danger("Failed to post thread: {e$message}")
-          log_event("post_error", e$message,
-                    list(post_id = thread_df$post_id[1]))
-        }
-      )
-    })
+  post_thread_rows(approved)
 }

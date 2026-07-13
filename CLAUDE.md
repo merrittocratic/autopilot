@@ -28,8 +28,9 @@ project is fully separate. Preferences:
 ### Approval-Gated, Not Default-Off
 The pipeline's safety model is a **human approval checkpoint before publish**,
 not a global posting disable flag.
-- **X threads:** Google Sheet remains the approval surface. Drafts are written
-  with status `pending`, and only rows marked `approved` are posted.
+- **X threads:** Telegram is the approval surface. Drafts are still logged to
+  the `queue` tab, but the sheet is the audit trail/fallback queue, not the
+  primary action layer.
 - **LinkedIn posts:** Telegram is the approval surface. Drafts are still logged
   to the `linkedin` sheet tab, but the sheet is the audit trail/fallback queue,
   not the primary action layer.

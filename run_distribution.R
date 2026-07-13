@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # ============================================================================
 # run_distribution.R — Main orchestration script
-# 2026-07-13: Log all LinkedIn drafts and route approvals through Telegram
+# 2026-07-13: Route X + LinkedIn approvals through Telegram, keep Sheets as log
 # 2026-07-11: Add LinkedIn channel — draft in --check, Zernio post in --post
 # ============================================================================
 # This is the entry point called by launchd (or manually).
@@ -77,14 +77,17 @@ if (mode == "--check") {
 
         cli_alert_success("Post queued for review: {post$title}")
 
-        # Notify Steve on Telegram with full tweet text so he can review inline
+        # Notify Steve on Telegram with full tweet text so he can review inline.
+        # Sheets still log the thread, but Telegram is now the primary action
+        # surface for post/reject/edit decisions.
         # Note: x-monitor.R keywords are synced separately by keyword-sync.sh (daily at 6:15am)
         tweet_lines <- paste0(thread$tweet_number, ". ", thread$text)
         tweet_body  <- paste(tweet_lines, collapse = "\n\n")
         notify_telegram(glue(
-          "\U0001F4DD *{post$title}*\n\n",
+          "\U0001F4DD *{post$title}*\n",
+          "ID: `{post$post_id}`\n\n",
           "{tweet_body}\n\n",
-          "Reply with numbers to post, e.g. \"post 1 and 5\" or \"skip all\"."
+          "Reply `post thread {post$post_id} all` to publish the full thread, `post thread {post$post_id} 1,3,5` for selected tweets, `skip thread {post$post_id}` to reject, or `edit thread {post$post_id} 2: ...` to revise a tweet."
         ))
       } else {
         cli_alert_danger("Thread drafting failed for: {post$title}")

@@ -1,11 +1,49 @@
 # ============================================================================
 # 04_queue_write.R — Write draft threads to Google Sheet review queue
+# 2026-07-13: Add Telegram-driven audit/log helpers for inline X thread review
 # ============================================================================
-# Writes the drafted thread, metadata, and approval status to a Google Sheet
-# that serves as the human-in-the-loop review surface.
+# Writes the drafted thread, metadata, and status to a Google Sheet that now
+# serves as the audit log and fallback queue. Telegram is the primary review
+# surface for day-to-day X thread approvals.
 # ============================================================================
 
 source(here::here("R", "00_config.R"))
+
+QUEUE_COLS <- c(
+  post_id      = "A",
+  title        = "B",
+  post_link    = "C",
+  tweet_number = "D",
+  tweet_text   = "E",
+  char_count   = "F",
+  has_image    = "G",
+  image_path   = "H",
+  status       = "I",
+  created_at   = "J",
+  approved_at  = "K",
+  posted_at    = "L",
+  tweet_id     = "M",
+  notes        = "N"
+)
+
+queue_schema <- function() {
+  tibble(
+    post_id       = character(),
+    title         = character(),
+    post_link     = character(),
+    tweet_number  = character(),
+    tweet_text    = character(),
+    char_count    = character(),
+    has_image     = character(),
+    image_path    = character(),
+    status        = character(),
+    created_at    = character(),
+    approved_at   = character(),
+    posted_at     = character(),
+    tweet_id      = character(),
+    notes         = character()
+  )
+}
 
 # --- Sheet setup -------------------------------------------------------------
 # Run once to create the review queue sheet with proper headers
@@ -90,28 +128,76 @@ write_to_queue <- function(thread, content, image_paths = character(0)) {
   invisible(queue_rows)
 }
 
-# --- Read approved threads ---------------------------------------------------
+# --- Queue reads -------------------------------------------------------------
 
-read_approved_threads <- function() {
+read_queue <- function() {
   sheet_id <- Sys.getenv("REVIEW_SHEET_ID", unset = "")
   if (sheet_id == "") {
     cli_abort("REVIEW_SHEET_ID not set.")
   }
 
-  queue <- read_sheet(sheet_id, sheet = "queue")
+  if (!("queue" %in% sheet_names(sheet_id))) {
+    cli_alert_info("Queue tab not found yet")
+    return(queue_schema())
+  }
+
+  read_sheet(sheet_id, sheet = "queue", col_types = "c")
+}
+
+read_queue_rows <- function(statuses = NULL) {
+  queue <- read_queue()
+
+  if (nrow(queue) == 0 || is.null(statuses)) {
+    return(queue)
+  }
+
+  queue |>
+    filter(status %in% statuses)
+}
+
+get_thread_rows <- function(post_id, statuses = NULL) {
+  queue <- read_queue()
+
+  if (!is.null(statuses)) {
+    queue <- queue |>
+      filter(status %in% statuses)
+  }
+
+  queue |>
+    filter(post_id == !!post_id) |>
+    arrange(as.numeric(tweet_number))
+}
+
+latest_thread_rows <- function(statuses = c("pending", "approved")) {
+  queue <- read_queue_rows(statuses)
+
+  if (nrow(queue) == 0) {
+    return(queue_schema())
+  }
+
+  latest_post_id <- queue |>
+    mutate(.row_n = row_number()) |>
+    slice_max(order_by = .row_n, n = 1, with_ties = FALSE) |>
+    pull(post_id)
+
+  get_thread_rows(latest_post_id[[1]], statuses = statuses)
+}
+
+# --- Read approved threads ---------------------------------------------------
+
+read_approved_threads <- function() {
+  queue <- read_queue()
 
   if (nrow(queue) == 0) {
     cli_alert_info("Queue is empty")
     return(tibble())
   }
 
-  approved <- queue |>
-    filter(status == "approved")
+  approved <- read_queue_rows("approved")
 
   if (nrow(approved) == 0) {
     cli_alert_info("No approved threads in queue")
   } else {
-    # Group by post_id to show thread-level summary
     approved |>
       distinct(post_id, title) |>
       pwalk(\(post_id, title) {
@@ -122,63 +208,96 @@ read_approved_threads <- function() {
   approved
 }
 
-# --- Update status after posting ---------------------------------------------
+# --- Targeted cell updates ---------------------------------------------------
 
-update_queue_status <- function(post_id, tweet_number, new_status,
-                                 tweet_id = NA_character_) {
+update_queue_fields <- function(post_id, tweet_number, fields) {
+  if (length(fields) == 0) {
+    return(invisible(TRUE))
+  }
+
   sheet_id <- Sys.getenv("REVIEW_SHEET_ID", unset = "")
+  queue <- read_queue()
 
-  queue <- read_sheet(sheet_id, sheet = "queue")
-
-  row_idx <- which(queue$post_id == post_id & as.numeric(queue$tweet_number) == as.numeric(tweet_number))
+  row_idx <- which(
+    queue$post_id == post_id &
+      as.numeric(queue$tweet_number) == as.numeric(tweet_number)
+  )
 
   if (length(row_idx) == 0) {
     cli_alert_warning("No matching row for post {post_id}, tweet {tweet_number}")
     return(invisible(FALSE))
   }
+  if (length(row_idx) > 1) {
+    cli_alert_warning("Multiple rows for post {post_id}, tweet {tweet_number} — updating latest")
+    row_idx <- max(row_idx)
+  }
 
-  # Update the specific cells
-  timestamp_col <- switch(new_status,
+  unknown_fields <- setdiff(names(fields), names(QUEUE_COLS))
+  if (length(unknown_fields) > 0) {
+    cli_abort("Unknown queue field(s): {toString(unknown_fields)}")
+  }
+
+  walk(names(fields), \(field_name) {
+    range_write(
+      sheet_id,
+      data = tibble(value = fields[[field_name]]),
+      sheet = "queue",
+      range = glue("{QUEUE_COLS[[field_name]]}{row_idx + 1}"),
+      col_names = FALSE
+    )
+  })
+
+  invisible(TRUE)
+}
+
+append_queue_note <- function(post_id, tweet_number, note) {
+  row <- get_thread_rows(post_id) |>
+    filter(as.numeric(tweet_number) == as.numeric(!!tweet_number)) |>
+    slice_tail(n = 1)
+
+  if (nrow(row) == 0) {
+    cli_alert_warning("No matching row for post {post_id}, tweet {tweet_number}")
+    return(invisible(FALSE))
+  }
+
+  existing <- row$notes[[1]]
+  merged <- if (is.na(existing) || !nzchar(existing)) {
+    note
+  } else {
+    paste(existing, note, sep = "\n")
+  }
+
+  update_queue_fields(post_id, tweet_number, list(notes = merged))
+  invisible(merged)
+}
+
+# --- Update status after posting ---------------------------------------------
+
+update_queue_status <- function(post_id, tweet_number, new_status,
+                                tweet_id = NA_character_,
+                                note = NA_character_) {
+  fields <- list(status = new_status)
+
+  timestamp_field <- switch(new_status,
     "approved" = "approved_at",
     "posted"   = "posted_at",
     NULL
   )
 
-  # Write status
-  range_write(
-    sheet_id,
-    data = tibble(status = new_status),
-    sheet = "queue",
-    range = glue("I{row_idx + 1}"),  # +1 for header row
-    col_names = FALSE
-  )
-
-  # Write timestamp if applicable
-  if (!is.null(timestamp_col)) {
-    col_letter <- switch(timestamp_col,
-      "approved_at" = "K",
-      "posted_at"   = "L"
-    )
-    range_write(
-      sheet_id,
-      data = tibble(ts = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")),
-      sheet = "queue",
-      range = glue("{col_letter}{row_idx + 1}"),
-      col_names = FALSE
-    )
+  if (!is.null(timestamp_field)) {
+    fields[[timestamp_field]] <- format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
   }
 
-  # Write tweet_id if provided
   if (!is.na(tweet_id)) {
-    range_write(
-      sheet_id,
-      data = tibble(tweet_id = tweet_id),
-      sheet = "queue",
-      range = glue("M{row_idx + 1}"),
-      col_names = FALSE
-    )
+    fields$tweet_id <- tweet_id
   }
+
+  if (!is.na(note)) {
+    fields$notes <- note
+  }
+
+  ok <- update_queue_fields(post_id, tweet_number, fields)
 
   cli_alert_success("Updated tweet {tweet_number} → {new_status}")
-  invisible(TRUE)
+  invisible(ok)
 }

@@ -86,6 +86,11 @@ Telegram-driven LinkedIn review helper. Earnest calls this to show, edit,
 approve/post, or reject the latest queued LinkedIn draft while keeping the
 LinkedIn sheet tab as an audit log.
 
+### `x-review.R` / `x-review.sh`
+Telegram-driven X thread review helper. Earnest calls this to show, edit,
+approve/post, or reject a queued X thread while keeping the `queue` tab as an
+API/posting log and fallback queue.
+
 ### `check-pending-drafts.sh`
 Reads the Google Sheet queue for pending tweet drafts. Called by an
 OpenClaw cron job on the Mac Mini.
