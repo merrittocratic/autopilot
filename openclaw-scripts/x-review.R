@@ -1,6 +1,8 @@
 #!/usr/bin/env Rscript
 # ============================================================================
 # x-review.R — Telegram-driven X thread approvals/editing
+# 2026-07-13b: Enforce t.co-aware 280 limit on edits (fail at edit time, not
+#              mid-thread at the X API)
 # 2026-07-13: Add inline review actions so Telegram, not the Sheet, drives
 #             X thread approval while the Sheet remains the audit trail.
 # ============================================================================
@@ -194,12 +196,20 @@ edit_tweet <- function(post_id = NULL, tweet_number, text) {
     cli::cli_abort("Tweet number {tweet_number} not found in thread")
   }
 
+  # Count what X will count: every URL costs exactly 23 chars (t.co)
+  eff_chars <- x_effective_chars(text)
+  if (eff_chars > X_CHAR_LIMIT) {
+    cli::cli_abort(
+      "Edited tweet is {eff_chars} effective chars (links count as 23) — over the {X_CHAR_LIMIT} limit. Send a shorter version."
+    )
+  }
+
   update_queue_fields(
     rows$post_id[[1]],
     tweet_number,
     list(
       tweet_text = text,
-      char_count = as.character(nchar(text, type = "chars")),
+      char_count = as.character(eff_chars),
       status = "pending",
       approved_at = NA_character_
     )

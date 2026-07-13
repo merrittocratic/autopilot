@@ -1,5 +1,7 @@
 # ============================================================================
 # 03b_draft_linkedin.R — Generate LinkedIn post draft via Claude API
+# 2026-07-13: Keep best-effort draft on skip recommendation so the Telegram
+#             publish-anyway path has text to post
 # 2026-07-11b: Port substack-to-linkedin skill — links in post body (explicit
 #              Merrittocracy call, no first-comment pattern), ~200-300 words,
 #              model flags surface in a notes field
@@ -114,19 +116,21 @@ parse_linkedin_response <- function(raw_response, post_link) {
   notes <- parsed$notes
   if (is.null(notes) || !nzchar(str_trim(notes %||% ""))) notes <- NA_character_
 
-  if (recommendation == "skip") {
-    if (!is.na(notes)) cli_alert_info("LinkedIn skip flag: {notes}")
-    cli_alert_info("LinkedIn draft skipped by recommendation")
-    return(tibble(
-      recommendation = "skip",
-      post_text  = NA_character_,
-      char_count = NA_integer_,
-      word_count = NA_integer_,
-      notes      = as.character(notes)
-    ))
-  }
-
+  # A skip recommendation still carries a best-effort draft (publish-anyway
+  # path). Tolerate a missing draft on skip, but a post recommendation
+  # without text is a hard failure.
   if (is.null(parsed$post_text) || !nzchar(str_trim(parsed$post_text %||% ""))) {
+    if (recommendation == "skip") {
+      if (!is.na(notes)) cli_alert_info("LinkedIn skip flag: {notes}")
+      cli_alert_warning("Skip recommendation arrived without a draft — publish-anyway unavailable")
+      return(tibble(
+        recommendation = "skip",
+        post_text  = NA_character_,
+        char_count = NA_integer_,
+        word_count = NA_integer_,
+        notes      = as.character(notes)
+      ))
+    }
     cli_alert_danger("LinkedIn response missing 'post_text' field")
     return(NULL)
   }
@@ -158,11 +162,15 @@ parse_linkedin_response <- function(raw_response, post_link) {
   }
 
   if (!is.na(notes)) cli_alert_info("Model flag: {notes}")
-  cli_alert_success("LinkedIn post drafted ({word_count} words, {char_count} chars)")
+  if (recommendation == "skip") {
+    cli_alert_info("LinkedIn draft held by skip recommendation ({word_count} words)")
+  } else {
+    cli_alert_success("LinkedIn post drafted ({word_count} words, {char_count} chars)")
+  }
   cli_alert("  Hook: {str_trunc(post_text, 100)}")
 
   tibble(
-    recommendation = "post",
+    recommendation = recommendation,
     post_text  = post_text,
     char_count = char_count,
     word_count = word_count,

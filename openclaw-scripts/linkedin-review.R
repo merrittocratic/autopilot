@@ -1,6 +1,8 @@
 #!/usr/bin/env Rscript
 # ============================================================================
 # linkedin-review.R — Telegram-driven LinkedIn approvals/editing
+# 2026-07-13b: Plain edit resets status to pending (matches x-review) so the
+#              cron fallback can't publish mid-edit text; enforce char limit
 # 2026-07-13: Add inline review actions so Telegram, not the Sheet, drives
 #             LinkedIn approval while the Sheet remains the audit trail.
 # ============================================================================
@@ -132,14 +134,24 @@ edit_row <- function(post_id = NULL, text, approve = FALSE) {
     cli::cli_abort("Edited LinkedIn text cannot be empty")
   }
 
+  n_chars <- nchar(text, type = "chars")
+  if (n_chars > LINKEDIN_CHAR_LIMIT) {
+    cli::cli_abort(
+      "Edited text is {n_chars} chars — over the {LINKEDIN_CHAR_LIMIT} LinkedIn limit. Send a shorter version."
+    )
+  }
+
   row <- resolve_row(post_id)
   id <- row$post_id[[1]]
 
+  # Plain edit demotes to pending so the cron --post fallback can't publish
+  # mid-edit text; edit-and-approve re-approves explicitly below
   update_linkedin_fields(
     id,
     list(
       post_text = text,
-      char_count = as.character(nchar(text, type = "chars")),
+      char_count = as.character(n_chars),
+      status = "pending",
       approved_at = NA_character_
     )
   )

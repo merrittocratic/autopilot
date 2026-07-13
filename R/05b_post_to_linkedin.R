@@ -1,5 +1,7 @@
 # ============================================================================
 # 05b_post_to_linkedin.R — Post approved LinkedIn drafts via Zernio API
+# 2026-07-13b: Refuse rows without draft text (held drafts approved before a
+#              draft exists must not send null content to Zernio)
 # 2026-07-13: Add single-draft posting helper for Telegram approval flow
 # 2026-07-11b: Drop firstComment — links live in post body per
 #              substack-to-linkedin skill (explicit Merrittocracy call)
@@ -146,6 +148,13 @@ post_linkedin_rows <- function(rows) {
     rows |> select(post_id, title, post_text, image_url),
     \(post_id, title, post_text, image_url) {
       cli_h2("Posting to LinkedIn: {title}")
+
+      if (is.na(post_text) || !nzchar(post_text)) {
+        cli_alert_warning("No draft text for post {post_id} — cannot post. Edit it first.")
+        log_event("linkedin_post_error", "Approved row has no post_text",
+                  list(post_id = post_id))
+        return(invisible(NULL))
+      }
 
       zernio_id <- tryCatch(
         post_linkedin_via_zernio(post_text, image_url),

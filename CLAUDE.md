@@ -2,9 +2,11 @@
 
 ## Project Summary
 Distribution automation for the Merrittocracy brand. Takes a published Substack
-post, drafts an X thread via Claude API, queues it in a Google Sheet for human
-approval, and posts approved threads to X as reply chains. One human approval
-step between draft and publish — ~30 seconds on a phone per post.
+post, drafts an X thread and a LinkedIn post via Claude API, logs both to a
+Google Sheet, and surfaces them in Telegram where the human approves, edits,
+or rejects. Approved X threads post as reply chains via API v2; approved
+LinkedIn posts publish via Zernio. One human approval step between draft and
+publish — ~30 seconds on a phone per post.
 
 See `README.md` for setup, scheduling, and operator workflow. This file is for
 agent/Claude Code context when editing the repo.
@@ -85,7 +87,11 @@ The Telegram bot (`merrittocracybot`) is owned by OpenClaw on the Mac Mini.
 Autopilot scripts do NOT call the Telegram bot API with `reply_markup` /
 inline_keyboard messages, and do NOT poll `getUpdates`. Earnest handles all
 Telegram I/O (sends, callback reception, ACKs) via OpenClaw's routing layer
-and pipes JSON to log-only scripts (`x-surfacing-log.sh`, `x-feedback-log.sh`).
+and invokes repo scripts with what he receives: log-only scripts for
+monitoring feedback (`x-surfacing-log.sh`, `x-feedback-log.sh`) and, since
+2026-07-13, the review helpers (`x-review.sh`, `linkedin-review.sh`) that
+act on the queue and post approved content. The autopilot side still never
+receives Telegram input directly — Earnest is always the inbound boundary.
 The Bundle #3 fix (commit `a0c0bd7`, 2026-06-13) established this contract.
 See OpenClaw-Ops `journal/2026-W24.md` for the full architecture.
 

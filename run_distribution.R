@@ -1,6 +1,8 @@
 #!/usr/bin/env Rscript
 # ============================================================================
 # run_distribution.R — Main orchestration script
+# 2026-07-13b: Handle held drafts that arrive without text (no literal NA
+#              in Telegram, no publish-anyway offer with nothing to publish)
 # 2026-07-13: Route X + LinkedIn approvals through Telegram, keep Sheets as log
 # 2026-07-11: Add LinkedIn channel — draft in --check, Zernio post in --post
 # ============================================================================
@@ -131,12 +133,23 @@ if (mode == "--check") {
           log_event("linkedin_skip", "LinkedIn held by recommendation",
                     list(post_id = post$post_id, title = post$title,
                          notes = li_post$notes[[1]] %||% NA_character_))
+          # A held draft normally carries best-effort text; if the model
+          # returned none, say so instead of rendering a literal NA and
+          # offering a publish-anyway that has nothing to publish
+          held_body <- if (!is.na(li_post$post_text[[1]])) {
+            glue("{li_post$post_text[[1]]}\n\n")
+          } else ""
+          held_actions <- if (!is.na(li_post$post_text[[1]])) {
+            glue("Reply `post linkedin {post$post_id}` to publish anyway, `skip linkedin {post$post_id}` to log the pass, or `edit linkedin {post$post_id}: ...` with a rewrite.")
+          } else {
+            glue("No draft text was produced. Reply `edit linkedin {post$post_id}: ...` with your own text to queue it, or `skip linkedin {post$post_id}` to log the pass.")
+          }
           notify_telegram(glue(
             "\U0001F6AB *LinkedIn draft held: {post$title}*\n",
             "ID: `{post$post_id}`\n\n",
-            "{li_post$post_text[[1]]}\n\n",
+            "{held_body}",
             "Reason: {coalesce(li_post$notes[[1]], 'No LinkedIn angle strong enough to queue safely.')}\n\n",
-            "Reply `post linkedin {post$post_id}` to publish anyway, `skip linkedin {post$post_id}` to log the pass, or `edit linkedin {post$post_id}: ...` with a rewrite."
+            "{held_actions}"
           ))
         } else {
           cli_alert_danger("LinkedIn drafting failed for: {post$title}")

@@ -1,5 +1,6 @@
 # ============================================================================
 # 00_config.R — Constants, packages, and path configuration
+# 2026-07-13: Move x_effective_chars() here from 03 so review scripts share it
 # 2026-07-11: Add Zernio (LinkedIn) config — API base, key getters, char limit
 # ============================================================================
 # Merrittocracy Autopilot
@@ -118,6 +119,17 @@ THREAD_MAX_TWEETS <- 6
 
 # LinkedIn post limit — LinkedIn allows 3,000; keep headroom for safety
 LINKEDIN_CHAR_LIMIT <- 2900
+
+# t.co-aware character count — X replaces every URL with a 23-char t.co link
+# before counting toward 280. Used by 03 (draft validation) and x-review.R
+# (edit validation).
+x_effective_chars <- function(text) {
+  map_int(text, \(t) {
+    urls <- str_extract_all(t, "https?://\\S+|\\b[\\w.-]+\\.[a-z]{2,}/\\S*")[[1]]
+    nchar(str_remove_all(t, "https?://\\S+|\\b[\\w.-]+\\.[a-z]{2,}/\\S*")) +
+      23L * length(urls)
+  })
+}
 
 # --- Scheduling defaults -----------------------------------------------------
 

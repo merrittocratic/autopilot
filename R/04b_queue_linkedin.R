@@ -43,7 +43,7 @@ linkedin_queue_schema <- function() {
     post_text        = character(),
     char_count       = integer(),
     image_url        = character(),
-    status           = character(),   # "pending" | "approved" | "rejected" | "posted"
+    status           = character(),   # "pending" | "skip_recommended" | "approved" | "rejected" | "posted"
     created_at       = character(),
     approved_at      = character(),
     posted_at        = character(),

@@ -1,5 +1,6 @@
 # ============================================================================
 # 03_draft_thread.R — Generate X thread draft via Claude API
+# 2026-07-13: x_effective_chars() moved to 00_config.R (shared with x-review)
 # 2026-07-11: t.co-aware char validation (every URL counts as 23 chars) —
 #             matches the substack-to-x skill's budget math; prompt now
 #             defaults to a single post instead of a 3-5 tweet thread
@@ -104,18 +105,8 @@ Do NOT include any text outside the JSON array. No preamble, no explanation.
   thread
 }
 
-# --- t.co-aware character count ----------------------------------------------
-# X replaces every URL with a 23-char t.co link before counting toward 280
-
-x_effective_chars <- function(text) {
-  map_int(text, \(t) {
-    urls <- str_extract_all(t, "https?://\\S+|\\b[\\w.-]+\\.[a-z]{2,}/\\S*")[[1]]
-    nchar(str_remove_all(t, "https?://\\S+|\\b[\\w.-]+\\.[a-z]{2,}/\\S*")) +
-      23L * length(urls)
-  })
-}
-
 # --- Response parsing and validation -----------------------------------------
+# (x_effective_chars() moved to 00_config.R so x-review.R can share it)
 
 parse_thread_response <- function(raw_response, post_link) {
   # Strip markdown code fences if Claude wraps the JSON
