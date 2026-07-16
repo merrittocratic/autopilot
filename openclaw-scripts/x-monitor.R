@@ -352,6 +352,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("erling haaland", "world cup 2026", "norway", "christian pulisic", "usa soccer", "conversion rate", "gary lineker", "brazil elimination", "soccer analytics", "touches-per-goal", "quarterfinal", "american soccer pipeline", "world cup scoring", "belgium", "captain america"),
     summary = "A data-driven analyst questions why the U.S. lacks a generational soccer talent like Erling Haaland to compete on the World Cup stage."
   )
+,
+  list(
+    slug = "scottie-doesnt-know",
+    keywords = c("scottie doesn't know", "eric cole", "john deere classic", "golf model", "win probability", "datagolf", "us open", "the open championship", "wyndham clark", "mid-tier rankings", "golf analytics", "backtesting", "form windows", "per-round accuracy", "golf prediction model"),
+    summary = "Golf model backtesting created false confidence in rankings until real tournament results exposed downstream bugs in win probability calculations."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
