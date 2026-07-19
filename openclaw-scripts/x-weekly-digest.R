@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+# 2026-07-19: add persistent weekly JSON history tracking for digest metrics.
 # x-weekly-digest.R — Weekly X performance digest for @Merrittocratic
 # Runs Sunday mornings, delivers summary to Telegram
 # Metrics: impressions, likes, retweets, replies, follower delta, top posts
@@ -14,10 +15,12 @@ suppressPackageStartupMessages({
 # --- Config ------------------------------------------------------------------
 args <- commandArgs(trailingOnly = TRUE)
 DRY_RUN <- "--dry-run" %in% args
+WRITE_HISTORY <- "--write-history" %in% args
 
 TELEGRAM_BOT_TOKEN <- Sys.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID   <- Sys.getenv("TELEGRAM_CHAT_ID", "8676616323")
 STATE_FILE <- "/Users/merrittocracyclaw/.openclaw/workspace/scripts/x-digest-state.json"
+HISTORY_FILE <- "/Users/merrittocracyclaw/.openclaw/workspace/scripts/x-weekly-digest-history.json"
 MERRITTOCRATIC_HANDLE <- "Merrittocratic"
 
 # --- OAuth 1.0a (same pattern as x-monitor.R) --------------------------------
@@ -46,6 +49,56 @@ load_state <- function() {
 
 save_state <- function(state) {
   write(toJSON(state, auto_unbox = TRUE), STATE_FILE)
+}
+
+load_history <- function() {
+  if (!file.exists(HISTORY_FILE)) {
+    return(list(
+      schema = "merrittocracy.x_weekly_digest.v1",
+      handle = MERRITTOCRATIC_HANDLE,
+      history = list()
+    ))
+  }
+
+  out <- tryCatch(fromJSON(HISTORY_FILE, simplifyVector = FALSE), error = function(e) NULL)
+  if (is.null(out) || is.null(out$history)) {
+    return(list(
+      schema = "merrittocracy.x_weekly_digest.v1",
+      handle = MERRITTOCRATIC_HANDLE,
+      history = list()
+    ))
+  }
+  out
+}
+
+save_history <- function(record) {
+  hist <- load_history()
+  key <- record$week_end
+  existing_keys <- vapply(hist$history, function(x) x$week_end %||% NA_character_, character(1))
+  hit <- which(existing_keys == key)
+
+  if (length(hit)) {
+    hist$history[[hit[[1]]]] <- record
+  } else {
+    hist$history[[length(hist$history) + 1]] <- record
+  }
+
+  hist$history <- hist$history[order(vapply(hist$history, function(x) x$week_end %||% "", character(1)))]
+  write(toJSON(hist, auto_unbox = TRUE, pretty = TRUE), HISTORY_FILE)
+}
+
+get_previous_record <- function(week_end) {
+  hist <- load_history()
+  if (length(hist$history) == 0) return(NULL)
+
+  candidates <- hist$history[vapply(hist$history, function(x) {
+    !is.null(x$week_end) && !identical(x$week_end, week_end)
+  }, logical(1))]
+
+  if (length(candidates) == 0) return(NULL)
+
+  ordered <- candidates[order(vapply(candidates, function(x) x$week_end %||% "", character(1)))]
+  ordered[[length(ordered)]]
 }
 
 # --- X API helpers -----------------------------------------------------------
@@ -102,6 +155,13 @@ delta_str <- function(d) {
   if (d > 0) paste0(" (+", d, ")")
   else if (d < 0) paste0(" (", d, ")")
   else " (±0)"
+}
+
+wow_str <- function(current, previous, suffix = "") {
+  if (is.null(previous) || is.na(previous)) return(NULL)
+  delta <- as.numeric(current) - as.numeric(previous)
+  sign <- if (delta > 0) "+" else if (delta < 0) "" else "±"
+  paste0(sign, fmt(abs(delta)), suffix)
 }
 
 # --- Main --------------------------------------------------------------------
@@ -184,6 +244,7 @@ msg <- paste0(
   "  Replies:     ", fmt(total_replies), "\n"
 )
 
+top_post_records <- list()
 if (nrow(top_posts) > 0) {
   msg <- paste0(msg, "\n<b>Top Posts</b>\n")
   for (i in seq_len(nrow(top_posts))) {
@@ -191,12 +252,52 @@ if (nrow(top_posts) > 0) {
     snippet <- str_trunc(post$text, 80, ellipsis = "…")
     snippet <- str_remove_all(snippet, "https://t\\.co/\\S+")
     snippet <- str_trim(snippet)
+    top_post_records[[i]] <- list(
+      rank = i,
+      impressions = as.numeric(post$impressions %||% 0),
+      likes = as.numeric(post$likes %||% 0),
+      retweets = as.numeric(post$retweets %||% 0),
+      replies = as.numeric(post$replies %||% 0),
+      is_reply = isTRUE(post$is_reply),
+      text = snippet
+    )
     msg <- paste0(
       msg,
       i, ". ", fmt(post$impressions), " imp · ", fmt(post$likes), " ❤️\n",
       "   \"", snippet, "\"\n"
     )
   }
+}
+
+history_record <- list(
+  week_start = as.character(Sys.Date() - 7),
+  week_end = as.character(Sys.Date()),
+  generated_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+  handle = MERRITTOCRATIC_HANDLE,
+  followers = as.numeric(current_followers %||% NA),
+  follower_delta = if (is.na(follower_delta)) NULL else as.numeric(follower_delta),
+  posts_total = as.numeric(tweet_count),
+  posts_original = as.numeric(original_count),
+  posts_replies = as.numeric(reply_count),
+  impressions = as.numeric(total_impressions),
+  likes = as.numeric(total_likes),
+  retweets = as.numeric(total_retweets),
+  replies_received = as.numeric(total_replies),
+  top_posts = top_post_records
+)
+
+previous_week <- get_previous_record(history_record$week_end)
+if (!is.null(previous_week)) {
+  prev_label <- paste0(previous_week$week_start %||% "?", " – ", previous_week$week_end %||% "?")
+  msg <- paste0(
+    msg,
+    "\n<b>Vs prior week</b>\n",
+    "  Impressions: ", wow_str(history_record$impressions, previous_week$impressions), "\n",
+    "  Likes:       ", wow_str(history_record$likes, previous_week$likes), "\n",
+    "  Posts:       ", wow_str(history_record$posts_total, previous_week$posts_total), "\n",
+    "  Followers:   ", wow_str(history_record$followers, previous_week$followers), "\n",
+    "  Baseline:    ", prev_label, "\n"
+  )
 }
 
 msg <- paste0(msg, "\n<i>Next digest: next Sunday 8am ET</i>")
@@ -220,5 +321,9 @@ if (!DRY_RUN) {
     last_follower_count = current_followers,
     last_run = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
   ))
+  save_history(history_record)
+} else if (WRITE_HISTORY) {
+  save_history(history_record)
+  cat("History written in dry-run mode.\n")
 }
 cat("Done.\n")
