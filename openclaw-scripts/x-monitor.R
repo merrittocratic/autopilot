@@ -358,6 +358,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("scottie doesn't know", "eric cole", "john deere classic", "golf model", "win probability", "datagolf", "us open", "the open championship", "wyndham clark", "mid-tier rankings", "golf analytics", "backtesting", "form windows", "per-round accuracy", "golf prediction model"),
     summary = "Golf model backtesting created false confidence in rankings until real tournament results exposed downstream bugs in win probability calculations."
   )
+,
+  list(
+    slug = "predicting-the-majors-is-a-major",
+    keywords = c("scottie scheffler", "ryan fox", "2026 majors", "royal birkdale", "claret jug", "pga championship", "open championship", "masters augusta", "golf predictions", "favorite odds", "cameron young", "sam burns", "wyndham clark", "aaron rai", "rory mcilroy", "major championship predictions"),
+    summary = "Scheffler's zero major wins despite being favorite at all four proves predicting golf majors is harder than favorites suggest."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
