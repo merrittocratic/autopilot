@@ -364,6 +364,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("scottie scheffler", "ryan fox", "2026 majors", "royal birkdale", "claret jug", "pga championship", "open championship", "masters augusta", "golf predictions", "favorite odds", "cameron young", "sam burns", "wyndham clark", "aaron rai", "rory mcilroy", "major championship predictions"),
     summary = "Scheffler's zero major wins despite being favorite at all four proves predicting golf majors is harder than favorites suggest."
   )
+,
+  list(
+    slug = "trust-the-process-distrust-the-fit",
+    keywords = c("lebron james", "philadelphia 76ers", "joel embiid", "tyrese maxey", "jaylen brown", "paul george trade", "boston celtics", "bob myers", "vj edgecombe", "miami heat", "giannis antetokounmpo", "roster construction", "offensive fit", "possession touches", "finals mvp"),
+    summary = "LeBron's 76ers signing looks good on paper but raises concerns about offensive fit with too many ball-dominant stars."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
