@@ -370,6 +370,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("lebron james", "philadelphia 76ers", "joel embiid", "tyrese maxey", "jaylen brown", "paul george trade", "boston celtics", "bob myers", "vj edgecombe", "miami heat", "giannis antetokounmpo", "roster construction", "offensive fit", "possession touches", "finals mvp"),
     summary = "LeBron's 76ers signing looks good on paper but raises concerns about offensive fit with too many ball-dominant stars."
   )
+,
+  list(
+    slug = "on-this-team-we-fight-for-that-inch",
+    keywords = c("jahmyr gibbs", "fantasy football", "boxscore prophet", "derrick henry", "treveyon henderson", "quinshon judkins", "kyren williams", "kenneth walker", "bucky irving", "boom probability", "start probability", "fantasy model", "flex position", "running backs", "week 1 projections"),
+    summary = "New fantasy model 'Boxscore Prophet' replaces decimals with boom/start probabilities for accurate weekly predictions."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
