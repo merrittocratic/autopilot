@@ -376,6 +376,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("jahmyr gibbs", "fantasy football", "boxscore prophet", "derrick henry", "treveyon henderson", "quinshon judkins", "kyren williams", "kenneth walker", "bucky irving", "boom probability", "start probability", "fantasy model", "flex position", "running backs", "week 1 projections"),
     summary = "New fantasy model 'Boxscore Prophet' replaces decimals with boom/start probabilities for accurate weekly predictions."
   )
+,
+  list(
+    slug = "thats-my-teammate-thats-my-quarterback",
+    keywords = c("julian sayin", "jeremiah smith", "ohio state football", "arch manning", "texas longhorns", "cj carr", "notre dame", "dante moore", "oregon ducks", "john mateer", "oklahoma football", "carson beck", "miami hurricanes", "ryan day", "matt patricia", "caleb downs", "2026 college football", "77% completion rate", "national championship", "transfer portal"),
+    summary = "Elite quarterback-led teams dominate 2026 college football, making defensive depth the real championship differentiator."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
