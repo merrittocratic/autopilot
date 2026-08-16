@@ -382,6 +382,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("julian sayin", "jeremiah smith", "ohio state football", "arch manning", "texas longhorns", "cj carr", "notre dame", "dante moore", "oregon ducks", "john mateer", "oklahoma football", "carson beck", "miami hurricanes", "ryan day", "matt patricia", "caleb downs", "2026 college football", "77% completion rate", "national championship", "transfer portal"),
     summary = "Elite quarterback-led teams dominate 2026 college football, making defensive depth the real championship differentiator."
   )
+,
+  list(
+    slug = "unscripted",
+    keywords = c("patrick mahomes", "kansas city chiefs", "acl injury", "afc west", "one-score games", "super bowl mvp", "kenneth walker iii", "mansoor delane", "travis kelce", "denver broncos", "justin herbert", "drake maye", "new england patriots", "14-3 record", "regression to the mean"),
+    summary = "Preseason narratives often collapse under scrutiny; regression analysis shows Chiefs and Patriots stories are more complex than camp hype suggests."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
