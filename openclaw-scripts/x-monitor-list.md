@@ -30,6 +30,7 @@ each line. Edit this file to promote/demote accounts.
 
 ### Draft analysis
 - @DanielJeremiah [tier:1B] — NFL Network
+- @JoshPateCFB [tier:1B] — college football analyst, strong narrative-check fit
 - @Jordan_Reid — ESPN draft
 - @McShayESPN — ESPN draft
 - @bfd_nfl — Ben Fennell, film-heavy, underrated
