@@ -388,6 +388,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("patrick mahomes", "kansas city chiefs", "acl injury", "afc west", "one-score games", "super bowl mvp", "kenneth walker iii", "mansoor delane", "travis kelce", "denver broncos", "justin herbert", "drake maye", "new england patriots", "14-3 record", "regression to the mean"),
     summary = "Preseason narratives often collapse under scrutiny; regression analysis shows Chiefs and Patriots stories are more complex than camp hype suggests."
   )
+,
+  list(
+    slug = "20-beats-your-five",
+    keywords = c("arch manning", "julian sayin", "john mateer", "c.j. carr", "jeremiah smith", "dante moore", "heisman trophy", "college football production index", "quarterback rankings", "power 4 teams", "college football stats", "heisman predictions", "preseason rankings", "underdog candidates", "production baseline"),
+    summary = "Contrarian Heisman analysis shows five consensus names miss top contenders who could replicate dark-horse winner patterns."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
