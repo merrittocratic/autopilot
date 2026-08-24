@@ -46,6 +46,11 @@ SECRETS=(
 export REVIEW_SHEET_ID="1-AP273mLlwwmf2sWSE32a7D6ZQzT2J2zwjPdVTnCjSw"
 export R_LIBS_USER="/opt/homebrew/lib/R/4.5/site-library"
 
+# Extra secrets that live outside the shared "autopilot" service
+EXTRA_SECRET_SPECS=(
+  "FANTASYPROS_API_KEY:fantasypros-api-key:fantasypros"
+)
+
 # Fallback env file — used by cron when login keychain is locked
 FALLBACK_ENV="$HOME/.autopilot.env"
 
@@ -57,6 +62,16 @@ for SECRET in "${SECRETS[@]}"; do
     FAILED+=("$SECRET")
   else
     export "$SECRET"="$VALUE"
+  fi
+done
+
+for SPEC in "${EXTRA_SECRET_SPECS[@]}"; do
+  IFS=":" read -r ENV_NAME SERVICE_NAME ACCOUNT_NAME <<< "$SPEC"
+  VALUE=$(security find-generic-password -s "$SERVICE_NAME" -a "$ACCOUNT_NAME" -w 2>/dev/null) || true
+  if [ -z "$VALUE" ]; then
+    FAILED+=("$ENV_NAME")
+  else
+    export "$ENV_NAME"="$VALUE"
   fi
 done
 
