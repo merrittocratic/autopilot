@@ -394,6 +394,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("arch manning", "julian sayin", "john mateer", "c.j. carr", "jeremiah smith", "dante moore", "heisman trophy", "college football production index", "quarterback rankings", "power 4 teams", "college football stats", "heisman predictions", "preseason rankings", "underdog candidates", "production baseline"),
     summary = "Contrarian Heisman analysis shows five consensus names miss top contenders who could replicate dark-horse winner patterns."
   )
+,
+  list(
+    slug = "nothing-to-see-here-please",
+    keywords = c("boxscore prophet", "epa (expected points added)", "week 1 launch", "predictive modeling", "running backs", "wide receivers", "tight ends", "quarterbacks", "weather features", "prediction error", "null results", "machine learning", "sports analytics", "forecast accuracy", "player-weeks sample size"),
+    summary = "TheMerrittocracy publishes failed experiments from Boxscore Prophet's development to build audience trust through transparency."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
