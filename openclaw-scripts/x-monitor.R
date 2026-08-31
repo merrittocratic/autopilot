@@ -18,9 +18,12 @@ suppressPackageStartupMessages({
   library(stringr)
   library(purrr)
   library(glue)
+  library(readr)
 })
 
 # --- Config ------------------------------------------------------------------
+# 2026-08-31 — Add veteran-player matching against boxscore-prophet's
+#              output/latest/scored_slate.csv (soft-optional, staleness-gated).
 # 2026-08-31 — Drop candidate prospect fields when the matched row has NA
 #              player_name/p_boom/p_bust instead of passing them through.
 # 2026-06-13 — Path migration to single source of truth in autopilot/.
@@ -38,6 +41,15 @@ PROMPTS_DIR  <- file.path(AUTOPILOT, "prompts")
 # Runtime state stays outside the repo (state files are not git-tracked).
 STATE_FILE <- file.path(HOME_DIR, ".openclaw", "workspace", "memory", "x-monitor-state.json")
 MODEL_DATA <- file.path(HOME_DIR, "nfl-draft-model", "data", "05_scored_2026.rds")
+
+# boxscore-prophet's weekly veteran slate. output/latest/ is a gitignored,
+# cron-refreshed handoff dir (see boxscore-prophet/scripts/refresh_latest.sh)
+# -- soft-optional here the same way MODEL_DATA is, since the sibling repo's
+# output may be absent, stale, or mid-refresh on any given run.
+BOXSCORE_PROPHET_LATEST <- file.path(HOME_DIR, "boxscore-prophet", "output", "latest")
+BOXSCORE_SLATE          <- file.path(BOXSCORE_PROPHET_LATEST, "scored_slate.csv")
+BOXSCORE_MANIFEST       <- file.path(BOXSCORE_PROPHET_LATEST, "run_manifest.json")
+BOXSCORE_MAX_AGE_DAYS   <- 8   # weekly refresh cadence + buffer
 
 # Daily caps
 MAX_REPLIES_PER_DAY    <- 3   # API-eligible replies (engaged accounts only)
@@ -695,15 +707,34 @@ derive_draft_style <- function(tier, handle_lower) {
 # mentions a player/team in the model data OR an article-keyword
 # concept Steve has published on. Filters out generic transactions
 # that don't give Steve anything to add.
-has_analytical_hook <- function(prospect_match, keyword_score) {
-  prospect_match || keyword_score >= 1
+has_analytical_hook <- function(prospect_match, veteran_match, keyword_score) {
+  prospect_match || veteran_match || keyword_score >= 1
+}
+
+# Load boxscore-prophet's current-week veteran slate (QB/RB/WR/TE), if
+# present and not stale. Soft-optional the same way MODEL_DATA is: a
+# missing file, unreadable manifest, or a manifest older than
+# BOXSCORE_MAX_AGE_DAYS (offseason, refresh mid-run, sibling repo not
+# checked out) all just return NULL rather than failing the scan.
+# generated_at is parsed at day granularity only (timezone offset
+# dropped) -- fine for an N-day staleness check, not for anything finer.
+load_veteran_slate <- function() {
+  tryCatch({
+    manifest     <- fromJSON(BOXSCORE_MANIFEST)
+    generated_at <- str_extract(manifest$generated_at,
+                                 "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}")
+    generated_at <- as.POSIXct(generated_at, format = "%Y-%m-%dT%H:%M:%S", tz = "UTC")
+    age_days     <- as.numeric(difftime(Sys.time(), generated_at, units = "days"))
+    if (is.na(age_days) || age_days > BOXSCORE_MAX_AGE_DAYS) return(NULL)
+    read_csv(BOXSCORE_SLATE, show_col_types = FALSE)
+  }, error = function(e) NULL)
 }
 
 # --- Relevance scoring -------------------------------------------------------
 # Tier-aware: returns the keyword score, matched article (for tracking),
 # prospect match, and a should_surface decision based on the tier's rules.
 
-score_tweet <- function(tweet, tier, model_data = NULL) {
+score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL) {
   # For tier 1A/1B, score against original + quoted text so that a minimal
   # wrapper ("👀", single emoji) doesn't kill a substantive quote tweet.
   combined_text <- if (tier %in% c("1A", "1B") && !is.null(tweet$quoted_text)) {
@@ -721,6 +752,8 @@ score_tweet <- function(tweet, tier, model_data = NULL) {
       matched_article = NULL,
       prospect_match  = FALSE,
       matched_prospect = NULL,
+      veteran_match   = FALSE,
+      matched_veteran = NULL,
       substantive    = FALSE,
       minutes_old    = NA_real_,
       velocity       = 0,
@@ -787,6 +820,24 @@ score_tweet <- function(tweet, tier, model_data = NULL) {
     }
   }
 
+  # Veteran-name matching against boxscore-prophet's current-week slate
+  # (QB/RB/WR/TE). Full-name match only, deliberately no last-name fallback
+  # -- this pool is ~900 rows vs. the ~30 key draft prospects above, so a
+  # surname fallback here would be a much bigger collision risk.
+  veteran_match   <- FALSE
+  matched_veteran <- NULL
+  if (!is.null(veteran_data)) {
+    for (i in seq_len(nrow(veteran_data))) {
+      vname <- str_to_lower(veteran_data$player_name[i])
+      if (str_detect(text_lower, fixed(vname))) {
+        veteran_match   <- TRUE
+        matched_veteran <- veteran_data[i, ]
+        best_score      <- best_score + 2  # Veteran mention bonus
+        break
+      }
+    }
+  }
+
   # --- Tier-aware surfacing decision -----------------------------------------
   # Stale tweets never surface regardless of tier (freshness gates engagement).
   too_stale <- minutes_old > cfg$max_age_hours * 60
@@ -803,7 +854,7 @@ score_tweet <- function(tweet, tier, model_data = NULL) {
     list(surface = TRUE,  reason = "velocity_override")
   } else if (tier == "1C") {
     # 1C requires an analytical hook (model data or article concept)
-    if (has_analytical_hook(prospect_match, best_score)) {
+    if (has_analytical_hook(prospect_match, veteran_match, best_score)) {
       list(surface = TRUE, reason = "news_hook")
     } else {
       list(surface = FALSE, reason = "no_analytical_hook")
@@ -824,6 +875,8 @@ score_tweet <- function(tweet, tier, model_data = NULL) {
     matched_article  = best_article,
     prospect_match   = prospect_match,
     matched_prospect = matched_prospect,
+    veteran_match    = veteran_match,
+    matched_veteran  = matched_veteran,
     substantive      = substantive,
     minutes_old      = minutes_old,
     velocity         = velocity,
@@ -882,6 +935,9 @@ if (!is.null(tier_filter)) {
 # Load model data for prospect matching
 model_data <- tryCatch(readRDS(MODEL_DATA), error = function(e) NULL)
 
+# Load boxscore-prophet's veteran slate for veteran-name matching
+veteran_data <- load_veteran_slate()
+
 # Resolve user IDs (cached in state to avoid repeated lookups)
 needed_handles <- monitor$handle
 cached_ids     <- state$user_ids %||% list()
@@ -909,7 +965,7 @@ for (i in seq_len(nrow(monitor))) {
   for (tweet in tweets) {
     if (tweet$id %in% state$seen_tweet_ids) next
 
-    scoring <- score_tweet(tweet, tier, model_data)
+    scoring <- score_tweet(tweet, tier, model_data, veteran_data)
     if (!isTRUE(scoring$should_surface)) next
 
     handle_lower <- str_to_lower(tweet$username)
@@ -933,6 +989,7 @@ for (i in seq_len(nrow(monitor))) {
       relevance_score      = scoring$score,
       matched_article_slug = scoring$matched_article$slug %||% NA,
       prospect_match       = scoring$prospect_match,
+      veteran_match        = scoring$veteran_match,
       reason               = scoring$reason,
       engagement_status    = if (is_engaged) "engaged" else "cold",
       can_reply_via_api    = is_engaged,
@@ -962,6 +1019,29 @@ for (i in seq_len(nrow(monitor))) {
           "WARN: prospect_match=TRUE for tweet {tweet$id} but matched row ",
           "has NA fields (player_name={mp$player_name %||% 'NA'}) -- ",
           "dropping prospect data from candidate"
+        ))
+      }
+    }
+
+    if (scoring$veteran_match && !is.null(scoring$matched_veteran)) {
+      mv <- scoring$matched_veteran
+      # Same NA-field guard as the prospect block above.
+      veteran_fields_valid <- !is.na(mv$player_name) && !is.na(mv$p_start) &&
+        !is.na(mv$pred_tot)
+      if (veteran_fields_valid) {
+        candidate$veteran_name         <- mv$player_name
+        candidate$veteran_position     <- mv$position
+        candidate$veteran_team         <- mv$posteam
+        candidate$veteran_p_start      <- mv$p_start
+        candidate$veteran_p_boom       <- mv$p_boom
+        candidate$veteran_p_boom_recal <- mv$p_boom_recal
+        candidate$veteran_pred_vol     <- mv$pred_vol
+        candidate$veteran_pred_tot     <- mv$pred_tot
+      } else {
+        message(glue(
+          "WARN: veteran_match=TRUE for tweet {tweet$id} but matched row ",
+          "has NA fields (player_name={mv$player_name %||% 'NA'}) -- ",
+          "dropping veteran data from candidate"
         ))
       }
     }
