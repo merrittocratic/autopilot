@@ -21,6 +21,8 @@ suppressPackageStartupMessages({
 })
 
 # --- Config ------------------------------------------------------------------
+# 2026-08-31 — Drop candidate prospect fields when the matched row has NA
+#              player_name/p_boom/p_bust instead of passing them through.
 # 2026-06-13 — Path migration to single source of truth in autopilot/.
 # 2026-06-13 — Tier-aware scoring + draft style routing.
 #
@@ -939,12 +941,29 @@ for (i in seq_len(nrow(monitor))) {
     )
 
     if (scoring$prospect_match && !is.null(scoring$matched_prospect)) {
-      candidate$prospect_name     <- scoring$matched_prospect$player_name
-      candidate$prospect_position <- scoring$matched_prospect$position
-      candidate$prospect_school   <- scoring$matched_prospect$school
-      candidate$prospect_boom     <- scoring$matched_prospect$p_boom
-      candidate$prospect_bust     <- scoring$matched_prospect$p_bust
-      candidate$prospect_verdict  <- scoring$matched_prospect$model_verdict
+      mp <- scoring$matched_prospect
+      # 2026-08-31 -- guard against NA fields in a matched row leaking into
+      # candidate JSON as if they were real data (see x-monitor-feedback
+      # "Cooper Jr." incident review: prospect_match was FALSE for that
+      # tweet, so this specific case wasn't caused by this path, but the
+      # invariant -- prospect fields only ever come from a real matched
+      # row -- was previously unenforced).
+      prospect_fields_valid <- !is.na(mp$player_name) && !is.na(mp$p_boom) &&
+        !is.na(mp$p_bust)
+      if (prospect_fields_valid) {
+        candidate$prospect_name     <- mp$player_name
+        candidate$prospect_position <- mp$position
+        candidate$prospect_school   <- mp$school
+        candidate$prospect_boom     <- mp$p_boom
+        candidate$prospect_bust     <- mp$p_bust
+        candidate$prospect_verdict  <- mp$model_verdict
+      } else {
+        message(glue(
+          "WARN: prospect_match=TRUE for tweet {tweet$id} but matched row ",
+          "has NA fields (player_name={mp$player_name %||% 'NA'}) -- ",
+          "dropping prospect data from candidate"
+        ))
+      }
     }
 
     candidates <- c(candidates, list(candidate))
