@@ -234,36 +234,45 @@ call_claude <- function(tweet_bundle, date_label) {
 
 # --- Call Claude to surface Today's Takes ------------------------------------
 # Second Claude call against the same tweet bundle. Produces 3-5
-# original-post candidates (stories Steve could write a Substack/X post
-# about), not a reply-or-skip list. Returns the literal sentinel
-# "NO_TAKES_TODAY" when yesterday's news doesn't rise to take-worthy.
+# X-native original-post candidates Steve could post today, not
+# Substack-story prompts and not a reply-or-skip list. Returns the
+# literal sentinel "NO_TAKES_TODAY" when yesterday's news doesn't rise
+# to take-worthy.
 
 call_claude_takes <- function(tweet_bundle, date_label) {
   prompt <- glue(
-    "You are Earnest. Steve writes data-driven sports analysis on Substack ",
-    "under the TheMerrittocracy brand. He wants 3-5 ORIGINAL-POST candidates ",
-    "for today, derived from yesterday's sports news bundle below.\n\n",
-    "These are NOT reply candidates. They are stories Steve could write a ",
-    "standalone Substack post or original X thread about. Different mode of ",
-    "review: he's looking for a writing prompt, not a copy-paste reply.\n\n",
+    "You are Earnest. Steve runs TheMerrittocracy and wants 3-5 X-NATIVE ",
+    "ORIGINAL-POST ideas for today, derived from yesterday's sports news ",
+    "bundle below.\n\n",
+    "These are NOT reply candidates and NOT long-form article pitches. ",
+    "They should feel worth posting on X today even if no Substack article ",
+    "follows. Think timely, sharp, contrarian, and grounded in data or a ",
+    "strong analytical frame.\n\n",
     "Steve's editorial lanes:\n",
     "- NFL draft analytics (boom/bust model, organizational talent development, surplus value)\n",
-    "- NBA playoffs (analytical narrative, coaching value, seeding dynamics, star vs role-player math)\n",
+    "- NBA analytical narratives (team-building, coaching value, aging curves, star vs role-player math)\n",
     "- Golf majors (strokes gained, course fit, form vs prior, model accountability)\n",
     "- Sports narratives broken by data (the general pattern under it all)\n\n",
     "For each candidate, produce in Markdown:\n",
     "1. **<short headline>**\n",
     "   - Trigger: 1 sentence of what happened\n",
-    "   - Angle: contrarian / model-take / narrative-check / data-extension\n",
-    "   - Hook: 1-2 sentences pitching Steve's potential take, in first person\n\n",
+    "   - Why it matters now: 1 sentence on why this is worth posting today\n",
+    "   - X angle: 1 sentence with the sharpest, most postable take\n",
+    "   - Evidence hook: 1 sentence naming the stat, trend, comp, or frame Steve could lean on\n",
+    "   - Post format: single post / short thread\n",
+    "   - Draftable now?: yes / no\n\n",
     "Rules:\n",
     "1. Bias toward stories where Steve can bring a DATA angle. Pure ",
     "transactions/news without an analytical hook are NOT candidates.\n",
-    "2. NBA, NFL, Golf only. Skip MLB, soccer, college, etc.\n",
-    "3. Skip stories with race/politics content.\n",
-    "4. If yesterday's news was thin, return fewer high-quality candidates ",
+    "2. Prioritize ideas that can stand alone as an X post today. Do NOT ",
+    "frame them as \"I want to explore\", \"I could write\", or \"reverse-engineer\".\n",
+    "3. NBA, NFL, Golf only. Skip MLB, soccer, college, etc.\n",
+    "4. Skip stories with race/politics content.\n",
+    "5. If yesterday's news was thin, return fewer high-quality candidates ",
     "rather than padding to 5.\n",
-    "5. If literally no story rises to take-worthy, return the EXACT string ",
+    "6. Favor crisp ideas with one clear payoff, not broad thesis statements ",
+    "that need a full article to work.\n",
+    "7. If literally no story rises to take-worthy, return the EXACT string ",
     "NO_TAKES_TODAY (no other text, no quotes, no formatting).\n\n",
     "Date: {date_label}\n\n",
     "Tweets bundle:\n{tweet_bundle}"
@@ -403,9 +412,9 @@ if (dry_run) {
 
 # --- Today's Takes (Bundle #4) ----------------------------------------------
 # Second Claude call against the same tweet bundle, surfacing 3-5
-# original-post candidates. Sent as a separate Telegram message so
-# Steve can review in a different mental mode (browse-for-writing
-# rather than action-on-reply).
+# X-native original-post candidates. Sent as a separate Telegram
+# message so Steve can review in a different mental mode from reply
+# triage.
 
 cat("\nComputing Today's Takes...\n")
 takes <- tryCatch(
