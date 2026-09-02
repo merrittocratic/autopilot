@@ -2,6 +2,12 @@
 # ============================================================================
 # x-surfacing-log.R -- append a surfacing record to JSONL log
 # ============================================================================
+# 2026-09-02 -- Accept an optional fact_check field (x-fact-check.R verdict:
+#               "passed" | "failed_skipped" | "failed_stripped" |
+#               "skipped_no_claims") so Tier-2 fact-check outcomes are
+#               auditable alongside the existing feedback loop. Absent for
+#               callers that haven't wired the checker in yet -- logs NA.
+#
 # This script does NOT touch Telegram. Telegram I/O is owned by Earnest
 # via OpenClaw's routing layer; bypassing that creates a two-poller
 # conflict on getUpdates and (per Earnest's incident report) appears to
@@ -16,9 +22,10 @@
 #
 # Expected stdin shape:
 #   {
-#     "candidate":  { ...full x-monitor.R candidate JSON... },
-#     "draft":      "the drafted reply text",
-#     "message_id": 7891
+#     "candidate":   { ...full x-monitor.R candidate JSON... },
+#     "draft":       "the drafted reply text",
+#     "message_id":  7891,
+#     "fact_check":  "passed"   # optional, Tier-2 only -- see x-fact-check.R
 #   }
 # ============================================================================
 
@@ -40,6 +47,7 @@ input <- tryCatch(
 candidate  <- input$candidate
 draft      <- input$draft %||% "(no draft generated)"
 message_id <- input$message_id %||% NA
+fact_check <- input$fact_check %||% NA_character_
 
 if (is.null(candidate) || is.null(candidate$tweet_id)) {
   stop("Input missing required candidate.tweet_id field")
@@ -61,7 +69,8 @@ entry <- list(
   relevance_score    = candidate$relevance_score %||% 0,
   prospect_match     = candidate$prospect_match %||% FALSE,
   draft              = draft,
-  message_id         = message_id
+  message_id         = message_id,
+  fact_check         = fact_check
 )
 
 dir.create(dirname(SURFACING_LOG), showWarnings = FALSE, recursive = TRUE)

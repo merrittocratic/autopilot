@@ -1,6 +1,12 @@
 # SPEC: Tier-2 Fact-Check Gate for X Reply Drafts
 
-Status: proposed by Earnest, approved by Steve (2026-09-02) for build. Not yet implemented.
+Status: proposed by Earnest, approved by Steve (2026-09-02) for build.
+Autopilot-repo side built 2026-09-02 (`x-fact-check.R` / `x-fact-check.sh`,
+`x-surfacing-log.R` updated to log the `fact_check` field). **Not wired
+in yet** -- the OpenClaw-side Tier-2 drafting flow still needs to call
+`x-fact-check.sh` at the trigger point described below and act on its
+verdict. See `openclaw-scripts/README.md` for the script's stdin/stdout
+contract.
 
 ## Why
 

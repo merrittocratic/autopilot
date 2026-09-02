@@ -43,10 +43,31 @@ Shell wrapper for `x-monitor.R`. Injects keychain secrets via
 `scripts/autopilot-env.sh`, then calls the R script. Forwards all
 arguments through, so `x-monitor.sh --tier 1A` works as expected.
 
+### `x-fact-check.R` / `x-fact-check.sh`
+Tier-2-only post-draft verification gate (see `SPEC-tier2-fact-check.md`).
+Reads `{"candidate": {...}, "tweet_text": "...", "draft": "..."}` from
+stdin, returns `{"fact_check": "passed"|"failed_skipped"|"failed_stripped"|
+"skipped_no_claims", "draft": "...", "failed_claims": [...], "notes": "..."}`
+on stdout. Cheap regex gate skips the API call entirely for opinion/banter
+drafts with no checkable claims; otherwise calls `claude-haiku-4-5` with at
+most one additional lookup (our own model data, or one web search) to
+confirm every player/team/stat in the draft traces to the tweet text or the
+candidate's `prospect_*`/`veteran_*` fields. On failure, strips the failed
+claim and re-checks once before giving up and returning `failed_skipped`.
+
+**Does NOT own the Tier-2 drafting flow or Telegram I/O.** Per the same
+split as `x-surfacing-log.R` below: this is a callable gate, not an
+orchestrator. Whoever assembles the Tier-2 draft (OpenClaw-side, Earnest)
+is responsible for calling this at the trigger point -- right before a
+draft would be queued for Telegram -- for suppressing the surfacing when
+`fact_check` is `failed_skipped`, and for passing the `fact_check` value
+through to `x-surfacing-log.R` when logging the surfacing.
+
 ### `x-surfacing-log.R` / `x-surfacing-log.sh`
 Appends a single surfacing record to `data/x-monitor-surfacings.jsonl`.
-Reads `{"candidate": {...}, "draft": "...", "message_id": N}` from
-stdin. **Does NOT call Telegram.**
+Reads `{"candidate": {...}, "draft": "...", "message_id": N, "fact_check":
+"..."}` from stdin (`fact_check` optional, Tier-2 only). **Does NOT call
+Telegram.**
 
 Telegram I/O is owned by Earnest via OpenClaw's routing layer. After
 Earnest successfully sends a candidate-with-buttons message via
