@@ -54,6 +54,9 @@ suppressPackageStartupMessages({
 HOME_DIR      <- Sys.getenv("HOME")
 ANTHROPIC_KEY <- Sys.getenv("ANTHROPIC_API_KEY")
 MODEL_DATA    <- file.path(HOME_DIR, "nfl-draft-model", "data", "05_scored_2026.rds")
+# 2026-09-02 -- boxscore-prophet repo relocated from
+# ~/.openclaw/workspace/boxscore-prophet to ~/boxscore-prophet (top-level,
+# matching every other sibling repo). Path corrected here to match.
 BOXSCORE_SLATE <- file.path(HOME_DIR, "boxscore-prophet", "output", "latest", "scored_slate.csv")
 ANTHROPIC_URL <- "https://api.anthropic.com/v1/messages"
 HAIKU_MODEL   <- "claude-haiku-4-5"

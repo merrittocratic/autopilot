@@ -46,6 +46,9 @@ MODEL_DATA <- file.path(HOME_DIR, "nfl-draft-model", "data", "05_scored_2026.rds
 # cron-refreshed handoff dir (see boxscore-prophet/scripts/refresh_latest.sh)
 # -- soft-optional here the same way MODEL_DATA is, since the sibling repo's
 # output may be absent, stale, or mid-refresh on any given run.
+# 2026-09-02 -- boxscore-prophet repo relocated from
+# ~/.openclaw/workspace/boxscore-prophet to ~/boxscore-prophet (top-level,
+# matching every other sibling repo). Path corrected here to match.
 BOXSCORE_PROPHET_LATEST <- file.path(HOME_DIR, "boxscore-prophet", "output", "latest")
 BOXSCORE_SLATE          <- file.path(BOXSCORE_PROPHET_LATEST, "scored_slate.csv")
 BOXSCORE_MANIFEST       <- file.path(BOXSCORE_PROPHET_LATEST, "run_manifest.json")
