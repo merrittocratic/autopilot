@@ -423,6 +423,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("boxscore prophet", "fantasy football", "draft board", "rookie running backs", "bell-cow role", "committee back", "jeremiyah love", "saquon barkley", "christian mccaffrey", "derrick henry", "volume features", "carry share", "snap share", "in-season lineup tool", "draft capital"),
     summary = "Boxscore Prophet can't predict rookie RB roles before Week 1 because volume data doesn't exist yet."
   )
+,
+  list(
+    slug = "public-math",
+    keywords = c("boxscore prophet", "running back", "receiver", "quarterback", "tight end", "startable week", "boom", "ppr points", "probability model", "backtest", "player grading", "fantasy football", "model accuracy", "confidence buckets", "2016-2025 data"),
+    summary = "Boxscore Prophet explains how its player grading model works and validates its probability predictions against historical data."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
