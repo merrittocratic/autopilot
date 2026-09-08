@@ -429,6 +429,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("boxscore prophet", "running back", "receiver", "quarterback", "tight end", "startable week", "boom", "ppr points", "probability model", "backtest", "player grading", "fantasy football", "model accuracy", "confidence buckets", "2016-2025 data"),
     summary = "Boxscore Prophet explains how its player grading model works and validates its probability predictions against historical data."
   )
+,
+  list(
+    slug = "they-are-who-we-thought-they-were",
+    keywords = c("darian mensah", "trinidad chambliss", "heisman trophy", "miami football", "notre dame", "julian sayin", "arch manning", "john mateer", "dante moore", "cj carr", "college football rankings", "pass defense", "quarterback performance", "college football playoff", "week 1 college football"),
+    summary = "Heisman hype disproportionately favors QBs with high viewership over quality wins."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
