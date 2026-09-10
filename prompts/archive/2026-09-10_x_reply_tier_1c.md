@@ -62,7 +62,6 @@ Real examples in this voice:
 - News tweet: {tweet_text}
 - Account handle: @{username}
 - Model output (if player or team is in the dataset): {model_data}
-  - **Grounding rule:** If {model_data} is `NONE`, do not invent statistics, probabilities, boom rates, or percentages. Draft using only the tweet text and analytical framing. If no hook exists without model data, output `SKIP`.
 - Related article you wrote (knowledge only, do NOT mention): {article_summary}
 
 ## Output

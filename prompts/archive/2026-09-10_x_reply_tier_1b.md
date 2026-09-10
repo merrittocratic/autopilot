@@ -61,7 +61,6 @@ Real examples in this voice:
 - Tweet you're replying to: {tweet_text}
 - Account handle: @{username}
 - Optional model output: {model_data}
-  - **Grounding rule:** If {model_data} is `NONE`, do not invent statistics, probabilities, boom rates, or percentages. Draft using only the tweet text and analytical framing. If no hook exists without model data, output `SKIP`.
 - Optional related article you wrote (knowledge only, do NOT
   mention): {article_summary}
 
