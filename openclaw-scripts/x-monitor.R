@@ -435,6 +435,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("darian mensah", "trinidad chambliss", "heisman trophy", "miami football", "notre dame", "julian sayin", "arch manning", "john mateer", "dante moore", "cj carr", "college football rankings", "pass defense", "quarterback performance", "college football playoff", "week 1 college football"),
     summary = "Heisman hype disproportionately favors QBs with high viewership over quality wins."
   )
+,
+  list(
+    slug = "did-ya-get-that-memo",
+    keywords = c("odell beckham jr.", "fantasy football model", "week 1 predictions", "fantasy receiver rankings", "malik willis", "miami dolphins", "deshaun watson", "mason rudolph", "nfl snaps data", "draft pedigree", "trailing statistics", "fantasy analytics", "model accuracy", "quarterback rankings", "2026 nfl season"),
+    summary = "Fantasy model fails by ranking inactive players high due to missing in-season data and flawed fallback logic."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
