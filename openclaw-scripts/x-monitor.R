@@ -441,6 +441,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("odell beckham jr.", "fantasy football model", "week 1 predictions", "fantasy receiver rankings", "malik willis", "miami dolphins", "deshaun watson", "mason rudolph", "nfl snaps data", "draft pedigree", "trailing statistics", "fantasy analytics", "model accuracy", "quarterback rankings", "2026 nfl season"),
     summary = "Fantasy model fails by ranking inactive players high due to missing in-season data and flawed fallback logic."
   )
+,
+  list(
+    slug = "four-scores-and-one-week-ago",
+    keywords = c("jaxson dart", "giants offense", "epa (expected points added)", "cpoe (completion % over expected)", "cam skattebo", "cincinnati bengals", "joe burrow", "week 1 nfl", "success rate", "passing epa", "quarterback efficiency", "expert consensus ranking", "run-efficiency", "fantasy points", "box score analysis"),
+    summary = "Week 1 NFL box scores reveal which preseason narratives hold up and which don't through advanced metrics like EPA and CPOE."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
