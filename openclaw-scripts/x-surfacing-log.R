@@ -2,6 +2,15 @@
 # ============================================================================
 # x-surfacing-log.R -- append a surfacing record to JSONL log
 # ============================================================================
+# 2026-09-18 -- Log tweet_text and which player each match type actually
+#               resolved to (prospect_name/veteran_name/cfb_name/golf_name),
+#               not just the match booleans. Without this the log can't
+#               answer "did the right tweet get paired with the right
+#               match" after the fact -- surfaced by the Omar Cooper/RapSheet
+#               mismatch investigation (2026-09-18 chat), where prospect_match
+#               was true but there was no way to confirm from the log alone
+#               whether x-monitor.R or something downstream produced the
+#               pairing seen in Telegram.
 # 2026-09-02 -- Accept an optional fact_check field (x-fact-check.R verdict:
 #               "passed" | "failed_skipped" | "failed_stripped" |
 #               "skipped_no_claims") so Tier-2 fact-check outcomes are
@@ -56,6 +65,7 @@ if (is.null(candidate) || is.null(candidate$tweet_id)) {
 entry <- list(
   timestamp_utc      = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
   tweet_id           = candidate$tweet_id,
+  tweet_text         = candidate$text %||% NA_character_,
   username           = candidate$username %||% NA_character_,
   tier               = candidate$tier %||% NA_character_,
   is_cowherd         = candidate$is_cowherd %||% FALSE,
@@ -67,7 +77,17 @@ entry <- list(
   minutes_old        = candidate$minutes_old %||% NA_real_,
   engagement_per_min = candidate$engagement_per_min %||% NA_real_,
   relevance_score    = candidate$relevance_score %||% 0,
+  # Match booleans plus WHICH player each one resolved to -- previously only
+  # prospect_match (bool) was logged, so confirming a match's identity meant
+  # inferring it from the drafted text after the fact.
   prospect_match     = candidate$prospect_match %||% FALSE,
+  prospect_name      = candidate$prospect_name %||% NA_character_,
+  veteran_match      = candidate$veteran_match %||% FALSE,
+  veteran_name       = candidate$veteran_name %||% NA_character_,
+  cfb_match          = candidate$cfb_match %||% FALSE,
+  cfb_name           = candidate$cfb_name %||% NA_character_,
+  golf_match         = candidate$golf_match %||% FALSE,
+  golf_name          = candidate$golf_name %||% NA_character_,
   draft              = draft,
   message_id         = message_id,
   fact_check         = fact_check
