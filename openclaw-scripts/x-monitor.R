@@ -54,6 +54,16 @@ BOXSCORE_SLATE          <- file.path(BOXSCORE_PROPHET_LATEST, "scored_slate.csv"
 BOXSCORE_MANIFEST       <- file.path(BOXSCORE_PROPHET_LATEST, "run_manifest.json")
 BOXSCORE_MAX_AGE_DAYS   <- 8   # weekly refresh cadence + buffer
 
+# 2026-09-18 -- Content feature store (NFL/CFB/golf raw stats: EPA, target
+# share, college production percentiles, strokes-gained), independently
+# pulled by feature-store-refresh.R on its own daily cron -- decoupled from
+# this script's 15-minute cadence so CFBD/DataGolf never see live traffic
+# from here. Same soft-optional, staleness-gated contract as BOXSCORE_*
+# above: missing or stale manifest entry -> NULL, never fails the scan.
+FEATURE_STORE_DIR          <- file.path(AUTOPILOT, "data", "feature-store")
+FEATURE_STORE_MANIFEST     <- file.path(FEATURE_STORE_DIR, "manifest.json")
+FEATURE_STORE_MAX_AGE_DAYS <- 2   # daily refresh cadence + buffer
+
 # Daily caps
 MAX_REPLIES_PER_DAY    <- 3   # API-eligible replies (engaged accounts only)
 MAX_CANDIDATES_PER_DAY <- 8   # total surfacings across all tiers per day
@@ -740,8 +750,9 @@ derive_draft_style <- function(tier, handle_lower) {
 # mentions a player/team in the model data OR an article-keyword
 # concept Steve has published on. Filters out generic transactions
 # that don't give Steve anything to add.
-has_analytical_hook <- function(prospect_match, veteran_match, keyword_score) {
-  prospect_match || veteran_match || keyword_score >= 1
+has_analytical_hook <- function(prospect_match, veteran_match, keyword_score,
+                                 cfb_match = FALSE, golf_match = FALSE) {
+  prospect_match || veteran_match || cfb_match || golf_match || keyword_score >= 1
 }
 
 # Load boxscore-prophet's current-week veteran slate (QB/RB/WR/TE), if
@@ -763,11 +774,31 @@ load_veteran_slate <- function() {
   }, error = function(e) NULL)
 }
 
+# Load one sport's slice of the content feature store (see
+# feature-store-refresh.R), soft-optional against its shared manifest.json
+# the same way load_veteran_slate() is against BOXSCORE_MANIFEST: missing
+# file, unreadable manifest, no entry for this sport, or an entry older
+# than FEATURE_STORE_MAX_AGE_DAYS all just return NULL.
+load_feature_store <- function(sport) {
+  tryCatch({
+    manifest <- fromJSON(FEATURE_STORE_MANIFEST, simplifyVector = FALSE)
+    entry    <- manifest[[sport]]
+    if (is.null(entry)) return(NULL)
+    generated_at <- str_extract(entry$generated_at,
+                                 "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}")
+    generated_at <- as.POSIXct(generated_at, format = "%Y-%m-%dT%H:%M:%S", tz = "UTC")
+    age_days     <- as.numeric(difftime(Sys.time(), generated_at, units = "days"))
+    if (is.na(age_days) || age_days > FEATURE_STORE_MAX_AGE_DAYS) return(NULL)
+    read_csv(file.path(FEATURE_STORE_DIR, paste0(sport, "_features.csv")), show_col_types = FALSE)
+  }, error = function(e) NULL)
+}
+
 # --- Relevance scoring -------------------------------------------------------
 # Tier-aware: returns the keyword score, matched article (for tracking),
 # prospect match, and a should_surface decision based on the tier's rules.
 
-score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL) {
+score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL,
+                         cfb_data = NULL, golf_data = NULL) {
   # For tier 1A/1B, score against original + quoted text so that a minimal
   # wrapper ("👀", single emoji) doesn't kill a substantive quote tweet.
   combined_text <- if (tier %in% c("1A", "1B") && !is.null(tweet$quoted_text)) {
@@ -787,6 +818,10 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL) {
       matched_prospect = NULL,
       veteran_match   = FALSE,
       matched_veteran = NULL,
+      cfb_match       = FALSE,
+      matched_cfb     = NULL,
+      golf_match      = FALSE,
+      matched_golf    = NULL,
       substantive    = FALSE,
       minutes_old    = NA_real_,
       velocity       = 0,
@@ -871,6 +906,41 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL) {
     }
   }
 
+  # CFB-name matching against the content feature store's current-season
+  # production stats. Full-name match only, same collision reasoning as
+  # veteran_match above (~2,000+ rows -- a much bigger pool than the ~30
+  # key draft prospects, so no last-name fallback here either).
+  cfb_match   <- FALSE
+  matched_cfb <- NULL
+  if (!is.null(cfb_data)) {
+    for (i in seq_len(nrow(cfb_data))) {
+      cname <- str_to_lower(cfb_data$player[i])
+      if (str_detect(text_lower, fixed(cname))) {
+        cfb_match   <- TRUE
+        matched_cfb <- cfb_data[i, ]
+        best_score  <- best_score + 2  # CFB mention bonus
+        break
+      }
+    }
+  }
+
+  # Golf-name matching against the content feature store's skill/form
+  # data. Uses player_display_name ("First Last") -- DataGolf's own
+  # player_name field is "Last, First" and won't match tweet text.
+  golf_match   <- FALSE
+  matched_golf <- NULL
+  if (!is.null(golf_data)) {
+    for (i in seq_len(nrow(golf_data))) {
+      gname <- str_to_lower(golf_data$player_display_name[i])
+      if (str_detect(text_lower, fixed(gname))) {
+        golf_match   <- TRUE
+        matched_golf <- golf_data[i, ]
+        best_score   <- best_score + 2  # Golf mention bonus
+        break
+      }
+    }
+  }
+
   # --- Tier-aware surfacing decision -----------------------------------------
   # Stale tweets never surface regardless of tier (freshness gates engagement).
   too_stale <- minutes_old > cfg$max_age_hours * 60
@@ -887,7 +957,8 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL) {
     list(surface = TRUE,  reason = "velocity_override")
   } else if (tier == "1C") {
     # 1C requires an analytical hook (model data or article concept)
-    if (has_analytical_hook(prospect_match, veteran_match, best_score)) {
+    if (has_analytical_hook(prospect_match, veteran_match, best_score,
+                             cfb_match, golf_match)) {
       list(surface = TRUE, reason = "news_hook")
     } else {
       list(surface = FALSE, reason = "no_analytical_hook")
@@ -910,6 +981,10 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL) {
     matched_prospect = matched_prospect,
     veteran_match    = veteran_match,
     matched_veteran  = matched_veteran,
+    cfb_match        = cfb_match,
+    matched_cfb      = matched_cfb,
+    golf_match       = golf_match,
+    matched_golf     = matched_golf,
     substantive      = substantive,
     minutes_old      = minutes_old,
     velocity         = velocity,
@@ -971,6 +1046,31 @@ model_data <- tryCatch(readRDS(MODEL_DATA), error = function(e) NULL)
 # Load boxscore-prophet's veteran slate for veteran-name matching
 veteran_data <- load_veteran_slate()
 
+# Content feature store (feature-store-refresh.R's daily pull). NFL's raw
+# features supplement boxscore-prophet's p_start/p_boom probabilities
+# rather than replacing them (2026-09-18 chat) -- joined on player_id,
+# which both boxscore-prophet and nflreadr derive from the same nflverse
+# id scheme. CFB and golf have no existing slate to join onto, so they
+# stay as their own data frames and get their own match block in
+# score_tweet().
+nfl_feature_store <- load_feature_store("nfl")
+cfb_data          <- load_feature_store("cfb")
+golf_data         <- load_feature_store("golf")
+
+if (!is.null(veteran_data) && !is.null(nfl_feature_store)) {
+  veteran_data <- veteran_data |>
+    left_join(
+      nfl_feature_store |>
+        select(player_id, rolling_epa_per_opp, epa_per_opp_pctile,
+               season_target_share, target_share_pctile, low_sample) |>
+        rename(nfl_low_sample = low_sample),
+      by = "player_id"
+    )
+  if (mean(!is.na(veteran_data$rolling_epa_per_opp)) == 0) {
+    message("WARN: NFL feature-store join matched 0 rows against boxscore-prophet's veteran slate -- check player_id compatibility between the two sources")
+  }
+}
+
 # Resolve user IDs (cached in state to avoid repeated lookups)
 needed_handles <- monitor$handle
 cached_ids     <- state$user_ids %||% list()
@@ -998,7 +1098,7 @@ for (i in seq_len(nrow(monitor))) {
   for (tweet in tweets) {
     if (tweet$id %in% state$seen_tweet_ids) next
 
-    scoring <- score_tweet(tweet, tier, model_data, veteran_data)
+    scoring <- score_tweet(tweet, tier, model_data, veteran_data, cfb_data, golf_data)
     if (!isTRUE(scoring$should_surface)) next
 
     handle_lower <- str_to_lower(tweet$username)
@@ -1023,6 +1123,8 @@ for (i in seq_len(nrow(monitor))) {
       matched_article_slug = scoring$matched_article$slug %||% NA,
       prospect_match       = scoring$prospect_match,
       veteran_match        = scoring$veteran_match,
+      cfb_match            = scoring$cfb_match,
+      golf_match           = scoring$golf_match,
       reason               = scoring$reason,
       engagement_status    = if (is_engaged) "engaged" else "cold",
       can_reply_via_api    = is_engaged,
@@ -1070,11 +1172,70 @@ for (i in seq_len(nrow(monitor))) {
         candidate$veteran_p_boom_recal <- mv$p_boom_recal
         candidate$veteran_pred_vol     <- mv$pred_vol
         candidate$veteran_pred_tot     <- mv$pred_tot
+
+        # 2026-09-18 -- supplement (not replace, per chat) with raw content
+        # features from the independent NFL feature-store pull, joined onto
+        # this row by player_id above. Only present when that join hit --
+        # mv$rolling_epa_per_opp is NULL (not just NA) if nfl_feature_store
+        # was itself unavailable, so check existence before is.na().
+        if (!is.null(mv$rolling_epa_per_opp) && !is.na(mv$rolling_epa_per_opp)) {
+          candidate$veteran_epa_per_opp         <- round(mv$rolling_epa_per_opp, 3)
+          candidate$veteran_epa_per_opp_pctile  <- round(mv$epa_per_opp_pctile, 2)
+          candidate$veteran_target_share        <- round(mv$season_target_share, 3)
+          candidate$veteran_target_share_pctile <- round(mv$target_share_pctile, 2)
+          candidate$veteran_low_sample          <- mv$nfl_low_sample
+        }
       } else {
         message(glue(
           "WARN: veteran_match=TRUE for tweet {tweet$id} but matched row ",
           "has NA fields (player_name={mv$player_name %||% 'NA'}) -- ",
           "dropping veteran data from candidate"
+        ))
+      }
+    }
+
+    if (scoring$cfb_match && !is.null(scoring$matched_cfb)) {
+      mc <- scoring$matched_cfb
+      cfb_fields_valid <- !is.na(mc$player)
+      if (cfb_fields_valid) {
+        candidate$cfb_name       <- mc$player
+        candidate$cfb_team       <- mc$team
+        candidate$cfb_position   <- mc$position
+        candidate$cfb_low_sample <- mc$low_sample
+        if (mc$position == "QB" && !is.na(mc$qb_ypa)) {
+          candidate$cfb_qb_ypa_pctile     <- round(mc$qb_ypa_pctile, 2)
+          candidate$cfb_qb_cmp_pct_pctile <- round(mc$qb_cmp_pct_pctile, 2)
+          candidate$cfb_qb_int_pct_pctile <- round(mc$qb_int_pct_pctile, 2)
+        } else if (mc$position == "RB" && !is.na(mc$rush_ypc)) {
+          candidate$cfb_rush_ypc_pctile <- round(mc$rush_ypc_pctile, 2)
+        } else if (mc$position == "WR" && !is.na(mc$rec_ypr)) {
+          candidate$cfb_rec_ypr_pctile <- round(mc$rec_ypr_pctile, 2)
+        }
+      } else {
+        message(glue(
+          "WARN: cfb_match=TRUE for tweet {tweet$id} but matched row ",
+          "has NA player -- dropping CFB data from candidate"
+        ))
+      }
+    }
+
+    if (scoring$golf_match && !is.null(scoring$matched_golf)) {
+      mg <- scoring$matched_golf
+      golf_fields_valid <- !is.na(mg$player_display_name) && !is.na(mg$player_skill_prior)
+      if (golf_fields_valid) {
+        candidate$golf_name             <- mg$player_display_name
+        candidate$golf_n_rounds         <- mg$n_prior_rounds
+        candidate$golf_low_sample       <- mg$low_sample
+        candidate$golf_skill_pctile     <- round(mg$player_skill_pctile, 2)
+        candidate$golf_sg_ott_pctile    <- round(mg$sg_ott_pctile, 2)
+        candidate$golf_sg_app_pctile    <- round(mg$sg_app_pctile, 2)
+        candidate$golf_sg_arg_pctile    <- round(mg$sg_arg_pctile, 2)
+        candidate$golf_sg_putt_pctile   <- round(mg$sg_putt_pctile, 2)
+        candidate$golf_form_trend_pctile <- round(mg$form_trend_pctile, 2)
+      } else {
+        message(glue(
+          "WARN: golf_match=TRUE for tweet {tweet$id} but matched row ",
+          "has NA fields -- dropping golf data from candidate"
         ))
       }
     }

@@ -6,6 +6,7 @@ logs/*
 data/feed_state.json
 data/x-monitor-surfacings.jsonl
 data/x-monitor-feedback.jsonl
+data/feature-store/
 *service-account*.json
 merrittocracy-autopilot-*.json
 .Rproj.user
