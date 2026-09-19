@@ -7,6 +7,7 @@ data/feed_state.json
 data/x-monitor-surfacings.jsonl
 data/x-monitor-feedback.jsonl
 data/feature-store/
+data/voice-sample/
 *service-account*.json
 merrittocracy-autopilot-*.json
 .Rproj.user
