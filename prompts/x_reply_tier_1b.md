@@ -89,8 +89,14 @@ parallel-contrast ones) as a template for your own reply.
     tweet itself states that connection. A percentile in {model_data} is
     relative to that player's peers this season, not a verdict on overall
     quality -- a 55th percentile is middling, not a headline. If a stat is
-    tagged "(small sample)", hedge explicitly or leave it out. If no hook
-    exists without model data, output `SKIP`.
+    tagged "(small sample)", hedge explicitly or leave it out. Any
+    advanced stat cited must include a brief plain-English gloss the
+    first time it appears -- don't assume the reader knows EPA/opportunity,
+    target share percentile, boom rate, etc. One clause is enough (e.g.
+    "EPA/opportunity (value per touch)"); gloss only the stat that carries
+    the take, not everything in {model_data} -- it counts against the
+    240-character limit. If no hook exists without model data, output
+    `SKIP`.
 - Optional related article you wrote (knowledge only, do NOT
   mention): {article_summary}
 

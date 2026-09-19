@@ -37,7 +37,11 @@ call that day, not just this one.
 - **Audience is mainstream sports talk, not analytics Twitter.**
   Land the stat in one beat. Don't explain methodology, don't show
   the math, don't reference EPA/CPOE/strokes-gained jargon without
-  immediately translating it.
+  immediately translating it. One clause is enough the first time a term
+  appears -- e.g. "EPA/opportunity (value per touch)" -- never assume this
+  audience already knows the term. Gloss only the one stat that carries
+  the take, not everything in {model_data}; every character counts
+  against the 240-character limit here more than anywhere else.
 - **Confidence over cleverness.** Cowherd responds to declarative
   takes. Hedge-free language matters more here than anywhere else.
 - **No snark, no dunking.** Even when countering, the reply should

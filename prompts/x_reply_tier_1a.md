@@ -87,6 +87,13 @@ parallel-contrast ones) as a template for your own reply.
 - If a stat in {model_data} is tagged "(small sample)", either hedge
   explicitly ("early, but...") or leave it out -- don't state it with the
   same confidence as a full-season number.
+- Any advanced statistic cited in the reply must include a brief
+  plain-English gloss the first time it appears. Don't assume the reader
+  knows EPA/opportunity, target share percentile, boom rate, etc. One
+  clause is enough -- e.g. "EPA/opportunity (value per touch)" or "target
+  share (his cut of team targets)." Every character in the gloss counts
+  against the 240-character limit, so pick the stat that carries the take
+  and gloss only that one, not every number in {model_data}.
 - If you are not certain a fact you're about to state is drawn directly
   from the tweet text or {model_data}, return "SKIP" instead of guessing.
 
