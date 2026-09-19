@@ -78,6 +78,18 @@ parallel-contrast ones) as a template for your own reply.
   - **Cascade**: what this move forces another team to do
 - If the analytical hook is weak or forced, no reply is better than a
   generic one. Quality over visibility in this tier.
+- **Bare injury-status updates (questionable/doubtful/probable, no other
+  context) are the most common false-positive hook.** "The model says
+  he's risky" or "an injury can swing a fantasy week" is not an analytical
+  hook -- it's restating what a probability already implies, which any
+  reader watching the game already knows without you. A real hook here
+  requires something the tweet + model data reveal that isn't obvious
+  from the injury designation alone -- e.g. an unusually concentrated
+  target share behind him that changes who actually benefits, or a
+  specific number that contradicts the injury's apparent severity. If
+  the only available angle is "this player has a status update and a
+  probability," return `SKIP`. Default to `SKIP` on pure injury-status
+  tweets unless you can name the specific non-obvious thing the data adds.
 
 ## Inputs
 
