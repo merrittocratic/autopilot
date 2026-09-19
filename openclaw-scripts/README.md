@@ -97,8 +97,12 @@ format) and sends them as a separate Telegram message. If yesterday's
 news was thin, the takes call returns the `NO_TAKES_TODAY` sentinel
 and no second message is sent.
 
-### `weekly-digest.R` / `weekly-digest.sh`
-Weekly summary digest.
+### `x-weekly-digest.R` / `x-weekly-digest.sh`
+Weekly X performance digest for @Merrittocratic, sent to Telegram Sunday
+mornings: impressions, likes, retweets, replies, link clicks, engagement
+rate, follower delta, top 3 posts, and week-over-week trend via a
+persistent history file. (2026-09-19 -- merged from the since-retired
+weekly-digest.R/.sh; this is now the single source of truth.)
 
 ### `draft-expiry-nudge.R` / `draft-expiry-nudge.sh`
 Reminds Steve about pending drafts in the Google Sheet that are aging out.

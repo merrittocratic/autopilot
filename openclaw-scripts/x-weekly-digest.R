@@ -1,8 +1,26 @@
 #!/usr/bin/env Rscript
-# 2026-07-19: add persistent weekly JSON history tracking for digest metrics.
+# ============================================================================
 # x-weekly-digest.R — Weekly X performance digest for @Merrittocratic
-# Runs Sunday mornings, delivers summary to Telegram
-# Metrics: impressions, likes, retweets, replies, follower delta, top posts
+# ============================================================================
+# Runs Sunday mornings, delivers summary to Telegram.
+# Metrics: impressions, likes, retweets, replies, engagement rate, link
+# clicks, follower delta, top 3 posts, week-over-week trend.
+#
+# 2026-09-19 -- Merged with the since-retired weekly-digest.R (2026-09-19
+# audit, L-1/L-2/consolidation): this file had the better architecture
+# (handle-based user lookup, retweets excluded at the API level, replies-
+# received actually surfaced -- weekly-digest.R computed but never
+# displayed it, persistent per-week history with a correct prior-week
+# match instead of "whenever the script last happened to run"), but was
+# missing engagement rate and link-click tracking that weekly-digest.R
+# had. Ported those two in; weekly-digest.R/.sh deleted, this is now the
+# single source of truth. Also fixed: STATE_FILE/HISTORY_FILE hardcoded
+# both a username AND the deprecated ~/.openclaw/workspace/scripts/
+# directory (see CLAUDE.md, commit 1b4fff3) -- moved to
+# ~/.openclaw/workspace/memory/, the still-valid convention x-monitor.R
+# itself uses for runtime state.
+#
+# 2026-07-19: add persistent weekly JSON history tracking for digest metrics.
 
 suppressPackageStartupMessages({
   library(httr)
@@ -17,10 +35,12 @@ args <- commandArgs(trailingOnly = TRUE)
 DRY_RUN <- "--dry-run" %in% args
 WRITE_HISTORY <- "--write-history" %in% args
 
+HOME_DIR <- Sys.getenv("HOME")
+
 TELEGRAM_BOT_TOKEN <- Sys.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID   <- Sys.getenv("TELEGRAM_CHAT_ID", "8676616323")
-STATE_FILE <- "/Users/merrittocracyclaw/.openclaw/workspace/scripts/x-digest-state.json"
-HISTORY_FILE <- "/Users/merrittocracyclaw/.openclaw/workspace/scripts/x-weekly-digest-history.json"
+STATE_FILE   <- file.path(HOME_DIR, ".openclaw", "workspace", "memory", "x-digest-state.json")
+HISTORY_FILE <- file.path(HOME_DIR, ".openclaw", "workspace", "memory", "x-weekly-digest-history.json")
 MERRITTOCRATIC_HANDLE <- "Merrittocratic"
 
 # --- OAuth 1.0a (same pattern as x-monitor.R) --------------------------------
@@ -48,6 +68,7 @@ load_state <- function() {
 }
 
 save_state <- function(state) {
+  dir.create(dirname(STATE_FILE), recursive = TRUE, showWarnings = FALSE)
   write(toJSON(state, auto_unbox = TRUE), STATE_FILE)
 }
 
@@ -84,6 +105,7 @@ save_history <- function(record) {
   }
 
   hist$history <- hist$history[order(vapply(hist$history, function(x) x$week_end %||% "", character(1)))]
+  dir.create(dirname(HISTORY_FILE), recursive = TRUE, showWarnings = FALSE)
   write(toJSON(hist, auto_unbox = TRUE, pretty = TRUE), HISTORY_FILE)
 }
 
@@ -207,6 +229,7 @@ if (tweet_count > 0) {
       likes       = as.numeric(public$like_count %||% 0),
       retweets    = as.numeric(public$retweet_count %||% 0),
       replies     = as.numeric(public$reply_count %||% 0),
+      link_clicks = as.numeric(organic$url_link_clicks %||% 0),
       is_reply    = str_detect(t$text, "^@"),
       stringsAsFactors = FALSE
     )
@@ -217,11 +240,16 @@ if (tweet_count > 0) {
   total_likes       <- sum(df$likes, na.rm = TRUE)
   total_retweets    <- sum(df$retweets, na.rm = TRUE)
   total_replies     <- sum(df$replies, na.rm = TRUE)
+  total_link_clicks <- sum(df$link_clicks, na.rm = TRUE)
   top_posts         <- df |> arrange(desc(impressions), desc(likes)) |> head(3)
+  engagement_rate   <- if (total_impressions > 0) {
+    100 * (total_likes + total_retweets) / total_impressions
+  } else NA_real_
 } else {
   original_count <- reply_count <- 0
-  total_impressions <- total_likes <- total_retweets <- total_replies <- 0
+  total_impressions <- total_likes <- total_retweets <- total_replies <- total_link_clicks <- 0
   top_posts <- data.frame()
+  engagement_rate <- NA_real_
 }
 
 # --- Build message -----------------------------------------------------------
@@ -241,7 +269,9 @@ msg <- paste0(
   "  Impressions: ", fmt(total_impressions), "\n",
   "  Likes:       ", fmt(total_likes), "\n",
   "  Retweets:    ", fmt(total_retweets), "\n",
-  "  Replies:     ", fmt(total_replies), "\n"
+  "  Replies:     ", fmt(total_replies), "\n",
+  "  Link clicks: ", fmt(total_link_clicks), "\n",
+  "  Engagement rate: ", if (is.na(engagement_rate)) "—" else sprintf("%.1f%%", engagement_rate), "\n"
 )
 
 top_post_records <- list()
@@ -283,6 +313,8 @@ history_record <- list(
   likes = as.numeric(total_likes),
   retweets = as.numeric(total_retweets),
   replies_received = as.numeric(total_replies),
+  link_clicks = as.numeric(total_link_clicks),
+  engagement_rate = if (is.na(engagement_rate)) NULL else as.numeric(engagement_rate),
   top_posts = top_post_records
 )
 
@@ -296,6 +328,7 @@ if (!is.null(previous_week)) {
     "  Likes:       ", wow_str(history_record$likes, previous_week$likes), "\n",
     "  Posts:       ", wow_str(history_record$posts_total, previous_week$posts_total), "\n",
     "  Followers:   ", wow_str(history_record$followers, previous_week$followers), "\n",
+    "  Link clicks: ", wow_str(history_record$link_clicks, previous_week$link_clicks), "\n",
     "  Baseline:    ", prev_label, "\n"
   )
 }
