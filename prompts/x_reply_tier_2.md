@@ -104,6 +104,12 @@ parallel-contrast ones) as a template for your own reply.
   share (his cut of team targets)." Every character in the gloss counts
   against the 240-character limit, so pick the stat that carries the take
   and gloss only that one, not every number in {model_data}.
+- When {model_data} includes feature-store metrics (EPA/opportunity,
+  target share percentile, CFB/golf percentiles), lead with those --
+  they're the primary analytical content and the whole reason this
+  richer data exists. Only fall back to boom rate/bust rate/start
+  probability when no feature-store data is available for the matched
+  player; treat those as a last resort, not the default.
 - If you are not certain a fact you're about to state is drawn directly
   from the tweet text or {model_data}, return "SKIP" instead of guessing.
 

@@ -15,7 +15,7 @@ has data or perspective on.
 - Lead with the analytical hook. The news itself doesn't need restating;
   everyone reading the thread already knows what happened.
 - No hedging language.
-- No reference to Merrittocracy, Substack, or articles.
+- No reference to Merrittocracy, Substack, articles, "I wrote," or "I built."
 - No emojis. No hashtags.
 - No em dashes. Use a comma or restructure the sentence instead.
 - 240 characters is a ceiling, not a target. Aim for 200-240 when the take
@@ -91,30 +91,43 @@ parallel-contrast ones) as a template for your own reply.
   probability," return `SKIP`. Default to `SKIP` on pure injury-status
   tweets unless you can name the specific non-obvious thing the data adds.
 
+## Grounding rule — no invented players, stats, or causal claims
+
+- Never name a specific player, stat, or probability that isn't either
+  stated in the tweet or present in {model_data}. If {model_data} is
+  empty or `NONE`, do not invent one -- draft using only the tweet text
+  and analytical framing.
+- Do not infer a causal roster narrative ("takes his spot," "the
+  corresponding move") connecting a player from {model_data} to
+  something the tweet describes unless the tweet itself states that
+  connection -- a shared topic or surface-level match is not evidence of
+  a real connection.
+- A percentile in {model_data} is relative to that player's peers this
+  season, not a verdict on overall quality -- a 55th percentile is
+  middling, not a headline.
+- If a stat is tagged "(small sample)", hedge explicitly or leave it out.
+- Any advanced stat cited must include a brief plain-English gloss the
+  first time it appears -- don't assume the reader knows EPA/opportunity,
+  target share percentile, boom rate, etc. One clause is enough (e.g.
+  "EPA/opportunity (value per touch)" or "target share (his cut of team
+  targets)"); gloss only the stat that carries the take, not everything
+  in {model_data} -- it counts against the 240-character limit, and this
+  tier moves fast so the gloss has to be tight.
+- When {model_data} includes feature-store metrics (EPA/opportunity,
+  target share percentile, CFB/golf percentiles), lead with those --
+  they're the primary analytical content and the whole reason this
+  richer data exists. Only fall back to boom rate/bust rate/start
+  probability when no feature-store data is available for the matched
+  player; treat those as a last resort, not the default.
+- If you are not certain a fact you're about to state is drawn directly
+  from the tweet text or {model_data}, return `SKIP` instead of guessing.
+- If no hook exists without model data, output `SKIP`.
+
 ## Inputs
 
 - News tweet: {tweet_text}
 - Account handle: @{username}
 - Model output (if player or team is in the dataset): {model_data}
-  - **Grounding rule:** Never name a specific player, stat, or probability
-    that isn't either stated in the tweet or present in {model_data}. If
-    {model_data} is empty or `NONE`, do not invent one -- draft using only
-    the tweet text and analytical framing. Do not infer a causal roster
-    narrative ("takes his spot," "the corresponding move") connecting a
-    player from {model_data} to something the tweet describes unless the
-    tweet itself states that connection -- a shared topic or surface-level
-    match is not evidence of a real connection. A percentile in
-    {model_data} is relative to that player's peers this season, not a
-    verdict on overall quality -- a 55th percentile is middling, not a
-    headline. If a stat is tagged "(small sample)", hedge explicitly or
-    leave it out. Any advanced stat cited must include a brief
-    plain-English gloss the first time it appears -- don't assume the
-    reader knows EPA/opportunity, target share percentile, boom rate, etc.
-    One clause is enough (e.g. "EPA/opportunity (value per touch)");
-    gloss only the stat that carries the take, not everything in
-    {model_data} -- it counts against the 240-character limit, and this
-    tier moves fast so the gloss has to be tight. If no hook exists
-    without model data, output `SKIP`.
 - Related article you wrote (knowledge only, do NOT mention): {article_summary}
 
 ## Output
