@@ -755,6 +755,48 @@ has_analytical_hook <- function(prospect_match, veteran_match, keyword_score,
   prospect_match || veteran_match || cfb_match || golf_match || keyword_score >= 1
 }
 
+# 2026-09-19 audit (H-3) -- shared name-matching helper for the four
+# player-matching blocks below (prospect, veteran, CFB, golf). All four
+# used to `break` on the first name found in the tweet text, which is
+# wrong whenever a tweet names more than one player -- the first name
+# mentioned is not reliably the actionable one. Confirmed in production:
+# a Sharp tweet citing Jefferson's stat line as evidence, recommending
+# Wilson vs. GB, matched Jefferson (mentioned first) and produced a reply
+# about the wrong player entirely.
+#
+# Collects every row whose name appears in the tweet text (no break),
+# scores each match (+2 if has_data_fn says this row carries real,
+# non-thin data; +1 if opponent_fn says the row's opponent/team also
+# appears in the tweet -- a same-tweet contextual anchor), and returns
+# the single highest-scoring row. Ties keep the first match found
+# (which.max's default), i.e. behave like the old code when there's
+# nothing to disambiguate on.
+#
+# match_fn, has_data_fn, and opponent_fn all take (text_lower, row) and
+# return a scalar logical; has_data_fn/opponent_fn are optional (NULL
+# skips that scoring component -- e.g. CFB/golf have no per-week
+# opponent field, so opponent_fn is NULL for those).
+find_best_name_match <- function(text_lower, data, match_fn,
+                                  has_data_fn = NULL, opponent_fn = NULL) {
+  if (is.null(data) || nrow(data) == 0) return(NULL)
+
+  hits <- vapply(seq_len(nrow(data)), function(i) {
+    isTRUE(match_fn(text_lower, data[i, ]))
+  }, logical(1))
+  if (!any(hits)) return(NULL)
+
+  candidates <- data[hits, , drop = FALSE]
+  scores <- vapply(seq_len(nrow(candidates)), function(i) {
+    row   <- candidates[i, ]
+    score <- 0
+    if (!is.null(has_data_fn)  && isTRUE(has_data_fn(text_lower, row)))  score <- score + 2
+    if (!is.null(opponent_fn)  && isTRUE(opponent_fn(text_lower, row)))  score <- score + 1
+    score
+  }, numeric(1))
+
+  candidates[which.max(scores), , drop = FALSE]
+}
+
 # Load boxscore-prophet's current-week veteran slate (QB/RB/WR/TE), if
 # present and not stale. Soft-optional the same way MODEL_DATA is: a
 # missing file, unreadable manifest, or a manifest older than
@@ -846,22 +888,32 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL,
     }
   }
 
-  # Prospect-name matching against model data (NFL draft)
+  # Prospect-name matching against model data (NFL draft). Full-name pass
+  # first; only falls back to distinctive-last-name matching if the
+  # full-name pass found nothing at all (avoids Smith/Jones collisions).
+  # has_data_fn: a match only counts as "real data present" if boom/bust
+  # are both populated -- mirrors the prospect_fields_valid guard applied
+  # later when building the candidate. No opponent_fn -- team dev features
+  # are NA pre-draft-night (feature_dictionary.md), so there's no reliable
+  # opponent/team signal to disambiguate on for prospects.
   prospect_match   <- FALSE
   matched_prospect <- NULL
   if (!is.null(model_data)) {
     r1_prospects <- model_data |> filter(pick_est <= 64)
-    for (i in seq_len(nrow(r1_prospects))) {
-      pname <- str_to_lower(r1_prospects$player_name[i])
-      if (str_detect(text_lower, fixed(pname))) {
-        prospect_match   <- TRUE
-        matched_prospect <- r1_prospects[i, ]
-        best_score       <- best_score + 2  # Prospect mention bonus
-        break
-      }
-    }
-    # Fallback: distinctive last names only (avoid Smith/Jones collisions)
-    if (!prospect_match) {
+    has_prospect_data <- function(text_lower, row) !is.na(row$p_boom) && !is.na(row$p_bust)
+
+    best <- find_best_name_match(
+      text_lower, r1_prospects,
+      match_fn = function(text_lower, row) str_detect(text_lower, fixed(str_to_lower(row$player_name))),
+      has_data_fn = has_prospect_data
+    )
+
+    if (!is.null(best)) {
+      prospect_match   <- TRUE
+      matched_prospect <- best
+      best_score       <- best_score + 2  # Prospect mention bonus
+    } else {
+      # Fallback: distinctive last names only (avoid Smith/Jones collisions)
       key_prospects <- r1_prospects |>
         filter(pick_est <= 32) |>
         mutate(last_name = str_extract(str_to_lower(player_name), "\\S+$")) |>
@@ -876,14 +928,17 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL,
                                   "memphis", "indiana", "orlando", "miami",
                                   "phoenix", "portland", "charlotte", "cleveland",
                                   "brooklyn", "golden", "sacramento", "oklahoma"))
-      for (i in seq_len(nrow(key_prospects))) {
-        last_name <- key_prospects$last_name[i]
-        if (str_detect(text_lower, regex(paste0("\\b", last_name, "\\b")))) {
-          prospect_match   <- TRUE
-          matched_prospect <- key_prospects[i, ] |> select(-last_name)
-          best_score       <- best_score + 2
-          break
-        }
+
+      best_fallback <- find_best_name_match(
+        text_lower, key_prospects,
+        match_fn = function(text_lower, row) str_detect(text_lower, regex(paste0("\\b", row$last_name, "\\b"))),
+        has_data_fn = has_prospect_data
+      )
+
+      if (!is.null(best_fallback)) {
+        prospect_match   <- TRUE
+        matched_prospect <- best_fallback |> select(-last_name)
+        best_score       <- best_score + 2
       }
     }
   }
@@ -892,17 +947,32 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL,
   # (QB/RB/WR/TE). Full-name match only, deliberately no last-name fallback
   # -- this pool is ~900 rows vs. the ~30 key draft prospects above, so a
   # surname fallback here would be a much bigger collision risk.
+  # has_data_fn: prefers a row the independent NFL feature-store join
+  # actually hit (rolling_epa_per_opp non-NA). opponent_fn: +1 if the
+  # row's own defteam (upcoming opponent) is also named in the tweet --
+  # a same-tweet contextual anchor. 2026-09-19 audit (H-3): this is the
+  # fix for the confirmed Jefferson/Wilson mismatch -- a Sharp tweet
+  # citing Jefferson's stat line as evidence, recommending Wilson vs. GB,
+  # previously matched Jefferson (named first) instead of Wilson.
   veteran_match   <- FALSE
   matched_veteran <- NULL
   if (!is.null(veteran_data)) {
-    for (i in seq_len(nrow(veteran_data))) {
-      vname <- str_to_lower(veteran_data$player_name[i])
-      if (str_detect(text_lower, fixed(vname))) {
-        veteran_match   <- TRUE
-        matched_veteran <- veteran_data[i, ]
-        best_score      <- best_score + 2  # Veteran mention bonus
-        break
+    best <- find_best_name_match(
+      text_lower, veteran_data,
+      match_fn = function(text_lower, row) str_detect(text_lower, fixed(str_to_lower(row$player_name))),
+      has_data_fn = function(text_lower, row) {
+        !is.null(row$rolling_epa_per_opp) && !is.na(row$rolling_epa_per_opp)
+      },
+      opponent_fn = function(text_lower, row) {
+        dt <- row$defteam
+        !is.null(dt) && !is.na(dt) && nzchar(dt) &&
+          str_detect(text_lower, regex(paste0("\\b", str_to_lower(dt), "\\b")))
       }
+    )
+    if (!is.null(best)) {
+      veteran_match   <- TRUE
+      matched_veteran <- best
+      best_score      <- best_score + 2  # Veteran mention bonus
     }
   }
 
@@ -910,34 +980,42 @@ score_tweet <- function(tweet, tier, model_data = NULL, veteran_data = NULL,
   # production stats. Full-name match only, same collision reasoning as
   # veteran_match above (~2,000+ rows -- a much bigger pool than the ~30
   # key draft prospects, so no last-name fallback here either).
+  # has_data_fn: prefers a row that cleared the volume floor (!low_sample)
+  # over a thin-sample one. No opponent_fn -- the CFB feature store is a
+  # season-aggregate pull with no per-week matchup/opponent column.
   cfb_match   <- FALSE
   matched_cfb <- NULL
   if (!is.null(cfb_data)) {
-    for (i in seq_len(nrow(cfb_data))) {
-      cname <- str_to_lower(cfb_data$player[i])
-      if (str_detect(text_lower, fixed(cname))) {
-        cfb_match   <- TRUE
-        matched_cfb <- cfb_data[i, ]
-        best_score  <- best_score + 2  # CFB mention bonus
-        break
-      }
+    best <- find_best_name_match(
+      text_lower, cfb_data,
+      match_fn = function(text_lower, row) str_detect(text_lower, fixed(str_to_lower(row$player))),
+      has_data_fn = function(text_lower, row) !isTRUE(row$low_sample)
+    )
+    if (!is.null(best)) {
+      cfb_match   <- TRUE
+      matched_cfb <- best
+      best_score  <- best_score + 2  # CFB mention bonus
     }
   }
 
   # Golf-name matching against the content feature store's skill/form
   # data. Uses player_display_name ("First Last") -- DataGolf's own
   # player_name field is "Last, First" and won't match tweet text.
+  # has_data_fn: prefers a row that cleared the round-count floor
+  # (!low_sample) over a thin-sample one. No opponent_fn -- stroke play
+  # has no opponent concept.
   golf_match   <- FALSE
   matched_golf <- NULL
   if (!is.null(golf_data)) {
-    for (i in seq_len(nrow(golf_data))) {
-      gname <- str_to_lower(golf_data$player_display_name[i])
-      if (str_detect(text_lower, fixed(gname))) {
-        golf_match   <- TRUE
-        matched_golf <- golf_data[i, ]
-        best_score   <- best_score + 2  # Golf mention bonus
-        break
-      }
+    best <- find_best_name_match(
+      text_lower, golf_data,
+      match_fn = function(text_lower, row) str_detect(text_lower, fixed(str_to_lower(row$player_display_name))),
+      has_data_fn = function(text_lower, row) !isTRUE(row$low_sample)
+    )
+    if (!is.null(best)) {
+      golf_match   <- TRUE
+      matched_golf <- best
+      best_score   <- best_score + 2  # Golf mention bonus
     }
   }
 
@@ -1160,9 +1238,14 @@ for (i in seq_len(nrow(monitor))) {
 
     if (scoring$veteran_match && !is.null(scoring$matched_veteran)) {
       mv <- scoring$matched_veteran
-      # Same NA-field guard as the prospect block above.
+      # Same NA-field guard as the prospect block above. 2026-09-19 audit
+      # (M-1) -- p_boom_recal added: it's the specific field the drafting
+      # payload cites as "boom %", but it wasn't previously guarded, so a
+      # calibration miss (recal_method_boom NA for an edge player) let a
+      # null leak into candidate JSON and the model either invented a
+      # number or literally wrote "null%".
       veteran_fields_valid <- !is.na(mv$player_name) && !is.na(mv$p_start) &&
-        !is.na(mv$pred_tot)
+        !is.na(mv$pred_tot) && !is.na(mv$p_boom_recal)
       if (veteran_fields_valid) {
         candidate$veteran_name         <- mv$player_name
         candidate$veteran_position     <- mv$position
@@ -1170,8 +1253,9 @@ for (i in seq_len(nrow(monitor))) {
         candidate$veteran_p_start      <- mv$p_start
         candidate$veteran_p_boom       <- mv$p_boom
         candidate$veteran_p_boom_recal <- mv$p_boom_recal
-        candidate$veteran_pred_vol     <- mv$pred_vol
         candidate$veteran_pred_tot     <- mv$pred_tot
+        # pred_vol dropped (2026-09-19 audit, M-1) -- confirmed unreferenced
+        # in every prompt file and in x-fact-check.R/x-length-check.R.
 
         # 2026-09-18 -- supplement (not replace, per chat) with raw content
         # features from the independent NFL feature-store pull, joined onto
