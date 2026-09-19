@@ -17,9 +17,9 @@
 # never blocks the other two, same soft-optional contract x-monitor.R
 # already uses for load_veteran_slate().
 #
-# NOT YET WIRED: x-monitor.R does not read data/feature-store/ yet. That's
-# the next step (load_feature_store(sport), mirroring load_veteran_slate()'s
-# age-check/tryCatch pattern) once this has run cleanly against live data.
+# WIRED 2026-09-19: x-monitor.R reads data/feature-store/ via
+# load_feature_store(sport), mirroring load_veteran_slate()'s
+# age-check/tryCatch pattern (see openclaw-scripts/x-monitor.R).
 #
 # 2026-09-18 -- initial version. Written and reasoned from nfl-draft-model's
 #               feature_dictionary.md / 01c_load_college_stats.R and
