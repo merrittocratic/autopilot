@@ -17,7 +17,10 @@ has data or perspective on.
 - No hedging language.
 - No reference to Merrittocracy, Substack, or articles.
 - No emojis. No hashtags.
-- 240 characters max.
+- No em dashes. Use a comma or restructure the sentence instead.
+- 240 characters is a ceiling, not a target. Aim for 200-240 when the take
+  and data support it -- don't artificially cut content just to save
+  space.
 
 ## Voice calibration
 

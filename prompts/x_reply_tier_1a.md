@@ -21,7 +21,10 @@ strategic value.
 - No reference to Merrittocracy, Substack, articles, "I wrote," or "I built."
   The point of view stands on its own.
 - No emojis. No hashtags.
-- 240 characters max (leaves room for Steve to edit before posting).
+- No em dashes. Use a comma or restructure the sentence instead.
+- 240 characters is a ceiling, not a target. Aim for 200-240 when the take
+  and data support it -- don't artificially cut content just to save
+  space (leaves room for Steve to edit before posting either way).
 
 ## Voice calibration
 

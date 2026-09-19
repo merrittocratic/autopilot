@@ -16,7 +16,10 @@ team. Think "something a Herd producer would screenshot."
 - No hedging.
 - No Merrittocracy / Substack / article references.
 - No emojis. No hashtags.
-- 240 characters max.
+- No em dashes. Use a comma or restructure the sentence instead.
+- 240 characters is a ceiling, not a target. Aim for 200-240 when the take
+  and data support it -- don't artificially cut content just to save
+  space.
 
 ## Voice calibration
 
