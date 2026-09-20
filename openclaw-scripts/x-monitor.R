@@ -461,9 +461,15 @@ ARTICLE_TOPICS <- list(
 
 # Keywords that trigger HARD SKIP (no race, no politics)
 SKIP_KEYWORDS <- c(
+  # Race / politics — hard stop per SOUL.md
   "racist", "racism", "political", "politics", "election", "trump", "biden",
   "democrat", "republican", "liberal", "conservative", "woke", "dei",
-  "immigration", "abortion", "gun control", "protest"
+  "immigration", "abortion", "gun control", "protest",
+  # Off-field conduct / legal incidents — not analytical-reply territory
+  # (2026-09-20: added after Keenan Allen DUI draft incident)
+  "drunk driving", "\\bdui\\b", "\\bdwi\\b",
+  "domestic violence", "sexual assault", "sexual harassment",
+  "was arrested", "facing arrest", "\\barraigned\\b"
 )
 
 # --- Auth --------------------------------------------------------------------
@@ -753,6 +759,100 @@ derive_draft_style <- function(tier, handle_lower) {
 has_analytical_hook <- function(prospect_match, veteran_match, keyword_score,
                                  cfb_match = FALSE, golf_match = FALSE) {
   prospect_match || veteran_match || cfb_match || golf_match || keyword_score >= 1
+}
+
+# Assemble the {model_data} string for reply prompts from a candidate's
+# matched-player fields. Pre-formats with human-readable labels so raw
+# field names (e.g. p_boom_recal) never leak into a draft.
+# Stat priority: feature-store (EPA/opp, target share) first; boxscore-
+# prophet (start probability, boom recall) as fallback per MEMORY.md.
+# Returns "NONE" when no match data is present.
+# (2026-09-20: added to kill the "boom recal" label-leak incident)
+format_model_data <- function(candidate) {
+  blocks <- character(0)
+
+  # --- Veteran block ----------------------------------------------------------
+  if (isTRUE(candidate$veteran_match) && !is.null(candidate$veteran_name)) {
+    low  <- if (isTRUE(candidate$veteran_low_sample)) " (small sample)" else ""
+    name <- paste0(candidate$veteran_name, ", ", candidate$veteran_position,
+                   ", ", candidate$veteran_team)
+
+    has_fs <- !is.null(candidate$veteran_epa_per_opp) &&
+               length(candidate$veteran_epa_per_opp) > 0 &&
+               !is.na(candidate$veteran_epa_per_opp)
+
+    if (has_fs && !isTRUE(candidate$veteran_low_sample)) {
+      epa_pctile <- round(candidate$veteran_epa_per_opp_pctile * 100)
+      tgt_pctile <- round(candidate$veteran_target_share_pctile * 100)
+      tgt_share  <- round(candidate$veteran_target_share * 100, 1)
+      blocks <- c(blocks, paste0(
+        name, " — EPA/opportunity: ", candidate$veteran_epa_per_opp,
+        ", ", epa_pctile, "th percentile at position;",
+        " target share: ", tgt_share, "%, ", tgt_pctile, "th percentile"
+      ))
+    } else {
+      p_start <- round(candidate$veteran_p_start * 100, 1)
+      p_boom  <- round(candidate$veteran_p_boom_recal * 100, 1)
+      blocks <- c(blocks, paste0(
+        name, " — start probability: ", p_start, "%, boom recall: ", p_boom, "%", low
+      ))
+    }
+  }
+
+  # --- Prospect block ---------------------------------------------------------
+  if (isTRUE(candidate$prospect_match) && !is.null(candidate$prospect_name)) {
+    p_boom  <- round(candidate$prospect_boom * 100, 1)
+    p_bust  <- round(candidate$prospect_bust * 100, 1)
+    verdict <- if (!is.null(candidate$prospect_verdict) &&
+                    length(candidate$prospect_verdict) > 0 &&
+                    !is.na(candidate$prospect_verdict))
+      paste0(", verdict: ", candidate$prospect_verdict) else ""
+    blocks <- c(blocks, paste0(
+      candidate$prospect_name, ", ", candidate$prospect_position,
+      ", ", candidate$prospect_school,
+      " — boom: ", p_boom, "%, bust: ", p_bust, "%", verdict
+    ))
+  }
+
+  # --- CFB block --------------------------------------------------------------
+  if (isTRUE(candidate$cfb_match) && !is.null(candidate$cfb_name)) {
+    low   <- if (isTRUE(candidate$cfb_low_sample)) " (small sample)" else ""
+    stats <- character(0)
+    if (!is.null(candidate$cfb_qb_ypa_pctile) && !is.na(candidate$cfb_qb_ypa_pctile))
+      stats <- c(stats, paste0("YPA: ", round(candidate$cfb_qb_ypa_pctile * 100), "th percentile"))
+    if (!is.null(candidate$cfb_qb_cmp_pct_pctile) && !is.na(candidate$cfb_qb_cmp_pct_pctile))
+      stats <- c(stats, paste0("Cmp%: ", round(candidate$cfb_qb_cmp_pct_pctile * 100), "th percentile"))
+    if (!is.null(candidate$cfb_qb_int_pct_pctile) && !is.na(candidate$cfb_qb_int_pct_pctile))
+      stats <- c(stats, paste0("INT%: ", round(candidate$cfb_qb_int_pct_pctile * 100), "th percentile"))
+    if (!is.null(candidate$cfb_rush_ypc_pctile) && !is.na(candidate$cfb_rush_ypc_pctile))
+      stats <- c(stats, paste0("YPC: ", round(candidate$cfb_rush_ypc_pctile * 100), "th percentile"))
+    if (!is.null(candidate$cfb_rec_ypr_pctile) && !is.na(candidate$cfb_rec_ypr_pctile))
+      stats <- c(stats, paste0("YPR: ", round(candidate$cfb_rec_ypr_pctile * 100), "th percentile"))
+    if (length(stats) > 0) {
+      blocks <- c(blocks, paste0(
+        candidate$cfb_name, ", ", candidate$cfb_position, ", ", candidate$cfb_team,
+        " — ", paste(stats, collapse = "; "), low
+      ))
+    }
+  }
+
+  # --- Golf block -------------------------------------------------------------
+  if (isTRUE(candidate$golf_match) && !is.null(candidate$golf_name)) {
+    low <- if (isTRUE(candidate$golf_low_sample)) " (small sample)" else ""
+    blocks <- c(blocks, paste0(
+      candidate$golf_name, " (", candidate$golf_n_rounds, " rounds) — ",
+      "skill: ", round(candidate$golf_skill_pctile * 100), "th percentile; ",
+      "SG off-tee: ", round(candidate$golf_sg_ott_pctile * 100), "th, ",
+      "approach: ", round(candidate$golf_sg_app_pctile * 100), "th, ",
+      "around-green: ", round(candidate$golf_sg_arg_pctile * 100), "th, ",
+      "putting: ", round(candidate$golf_sg_putt_pctile * 100), "th; ",
+      "form trend: ", round(candidate$golf_form_trend_pctile * 100), "th percentile",
+      low
+    ))
+  }
+
+  if (length(blocks) == 0) return("NONE")
+  paste(blocks, collapse = "\n")
 }
 
 # 2026-09-19 audit (H-3) -- shared name-matching helper for the four
@@ -1324,6 +1424,7 @@ for (i in seq_len(nrow(monitor))) {
       }
     }
 
+    candidate$model_data <- format_model_data(candidate)
     candidates <- c(candidates, list(candidate))
   }
 
