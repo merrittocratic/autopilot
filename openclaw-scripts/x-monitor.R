@@ -785,28 +785,41 @@ format_model_data <- function(candidate) {
       # Feature-store stats (EPA/opp, target share) are the primary source.
       # Use them even when low_sample — just tag the block. Only fall back
       # to boxscore-prophet when feature-store is completely absent.
-      epa_pctile <- round(candidate$veteran_epa_per_opp_pctile * 100)
+      #
+      # 2026-09-20 (NA-leak fix): veteran_epa_per_opp being non-NA does NOT
+      # guarantee veteran_epa_per_opp_pctile/veteran_target_share_pctile are
+      # -- pctile_rank() independently returns NA per-stat whenever THAT
+      # stat's own cohort falls below its min-size floor (e.g. early
+      # season), even when the raw stat itself is fine. Each percentile is
+      # now checked on its own before use; a missing percentile shows the
+      # raw stat alone rather than leaking a literal "NA" into the text.
+      epa_pctile_ok <- !is.null(candidate$veteran_epa_per_opp_pctile) &&
+                         !is.na(candidate$veteran_epa_per_opp_pctile)
+      epa_part <- if (epa_pctile_ok) {
+        paste0("EPA/opportunity: ", candidate$veteran_epa_per_opp, ", ",
+               round(candidate$veteran_epa_per_opp_pctile * 100), "th percentile at position")
+      } else {
+        paste0("EPA/opportunity: ", candidate$veteran_epa_per_opp)
+      }
+
       # Skip target share for QBs — it's always 0 (QBs throw targets,
       # they don't receive them), so the percentile is meaningless.
       is_qb <- !is.null(candidate$veteran_position) &&
                 identical(candidate$veteran_position, "QB")
-      if (!is_qb && !is.null(candidate$veteran_target_share) &&
-          !is.na(candidate$veteran_target_share)) {
-        tgt_pctile <- round(candidate$veteran_target_share_pctile * 100)
-        tgt_share  <- round(candidate$veteran_target_share * 100, 1)
-        blocks <- c(blocks, paste0(
-          name, " — EPA/opportunity: ", candidate$veteran_epa_per_opp,
-          ", ", epa_pctile, "th percentile at position;",
-          " target share: ", tgt_share, "%, ", tgt_pctile, "th percentile",
-          low
-        ))
+      tgt_ok <- !is_qb && !is.null(candidate$veteran_target_share) &&
+                 !is.na(candidate$veteran_target_share)
+      tgt_pctile_ok <- tgt_ok && !is.null(candidate$veteran_target_share_pctile) &&
+                        !is.na(candidate$veteran_target_share_pctile)
+      tgt_part <- if (tgt_pctile_ok) {
+        paste0("; target share: ", round(candidate$veteran_target_share * 100, 1), "%, ",
+               round(candidate$veteran_target_share_pctile * 100), "th percentile")
+      } else if (tgt_ok) {
+        paste0("; target share: ", round(candidate$veteran_target_share * 100, 1), "%")
       } else {
-        blocks <- c(blocks, paste0(
-          name, " — EPA/opportunity: ", candidate$veteran_epa_per_opp,
-          ", ", epa_pctile, "th percentile at position",
-          low
-        ))
+        ""
       }
+
+      blocks <- c(blocks, paste0(name, " — ", epa_part, tgt_part, low))
     } else {
       # Fallback: boxscore-prophet boom/start (skill positions only).
       p_start <- round(candidate$veteran_p_start * 100, 1)
@@ -855,18 +868,35 @@ format_model_data <- function(candidate) {
   }
 
   # --- Golf block -------------------------------------------------------------
+  # 2026-09-20 (NA-leak fix): each SG-category/skill/form percentile is its
+  # own independent pctile_rank() call in feature-store-refresh.R, each
+  # with its own cohort -- one can be NA (that stat's cohort missed the
+  # size floor, e.g. a round missing component-level SG data) while others
+  # for the same golfer are fine. Same conditional-inclusion pattern as
+  # the CFB block below: only include a stat if its own percentile is
+  # non-NA, and only emit the whole block if at least one stat qualified.
   if (isTRUE(candidate$golf_match) && !is.null(candidate$golf_name)) {
     low <- if (isTRUE(candidate$golf_low_sample)) " (small sample)" else ""
-    blocks <- c(blocks, paste0(
-      candidate$golf_name, " (", candidate$golf_n_rounds, " rounds) — ",
-      "skill: ", round(candidate$golf_skill_pctile * 100), "th percentile; ",
-      "SG off-tee: ", round(candidate$golf_sg_ott_pctile * 100), "th, ",
-      "approach: ", round(candidate$golf_sg_app_pctile * 100), "th, ",
-      "around-green: ", round(candidate$golf_sg_arg_pctile * 100), "th, ",
-      "putting: ", round(candidate$golf_sg_putt_pctile * 100), "th; ",
-      "form trend: ", round(candidate$golf_form_trend_pctile * 100), "th percentile",
-      low
-    ))
+    gstats <- character(0)
+    if (!is.null(candidate$golf_skill_pctile) && !is.na(candidate$golf_skill_pctile))
+      gstats <- c(gstats, paste0("skill: ", round(candidate$golf_skill_pctile * 100), "th percentile"))
+    if (!is.null(candidate$golf_sg_ott_pctile) && !is.na(candidate$golf_sg_ott_pctile))
+      gstats <- c(gstats, paste0("SG off-tee: ", round(candidate$golf_sg_ott_pctile * 100), "th"))
+    if (!is.null(candidate$golf_sg_app_pctile) && !is.na(candidate$golf_sg_app_pctile))
+      gstats <- c(gstats, paste0("approach: ", round(candidate$golf_sg_app_pctile * 100), "th"))
+    if (!is.null(candidate$golf_sg_arg_pctile) && !is.na(candidate$golf_sg_arg_pctile))
+      gstats <- c(gstats, paste0("around-green: ", round(candidate$golf_sg_arg_pctile * 100), "th"))
+    if (!is.null(candidate$golf_sg_putt_pctile) && !is.na(candidate$golf_sg_putt_pctile))
+      gstats <- c(gstats, paste0("putting: ", round(candidate$golf_sg_putt_pctile * 100), "th"))
+    if (!is.null(candidate$golf_form_trend_pctile) && !is.na(candidate$golf_form_trend_pctile))
+      gstats <- c(gstats, paste0("form trend: ", round(candidate$golf_form_trend_pctile * 100), "th percentile"))
+
+    if (length(gstats) > 0) {
+      blocks <- c(blocks, paste0(
+        candidate$golf_name, " (", candidate$golf_n_rounds, " rounds) — ",
+        paste(gstats, collapse = "; "), low
+      ))
+    }
   }
 
   if (length(blocks) == 0) return("NONE")
