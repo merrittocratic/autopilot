@@ -3,6 +3,9 @@
 # Cron: 0 10 * * * (6:00am ET = 10:00am UTC during EDT)
 # Fetches previous day's ESPN/FoxSports tweets, synthesizes digest, sends to Telegram
 
+# DISABLED 2026-09-06 — Steve turned this off
+exit 0
+
 LOG_FILE="$HOME/.openclaw/workspace/logs/morning-sports-digest.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
