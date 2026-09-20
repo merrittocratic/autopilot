@@ -781,16 +781,34 @@ format_model_data <- function(candidate) {
                length(candidate$veteran_epa_per_opp) > 0 &&
                !is.na(candidate$veteran_epa_per_opp)
 
-    if (has_fs && !isTRUE(candidate$veteran_low_sample)) {
+    if (has_fs) {
+      # Feature-store stats (EPA/opp, target share) are the primary source.
+      # Use them even when low_sample — just tag the block. Only fall back
+      # to boxscore-prophet when feature-store is completely absent.
       epa_pctile <- round(candidate$veteran_epa_per_opp_pctile * 100)
-      tgt_pctile <- round(candidate$veteran_target_share_pctile * 100)
-      tgt_share  <- round(candidate$veteran_target_share * 100, 1)
-      blocks <- c(blocks, paste0(
-        name, " — EPA/opportunity: ", candidate$veteran_epa_per_opp,
-        ", ", epa_pctile, "th percentile at position;",
-        " target share: ", tgt_share, "%, ", tgt_pctile, "th percentile"
-      ))
+      # Skip target share for QBs — it's always 0 (QBs throw targets,
+      # they don't receive them), so the percentile is meaningless.
+      is_qb <- !is.null(candidate$veteran_position) &&
+                identical(candidate$veteran_position, "QB")
+      if (!is_qb && !is.null(candidate$veteran_target_share) &&
+          !is.na(candidate$veteran_target_share)) {
+        tgt_pctile <- round(candidate$veteran_target_share_pctile * 100)
+        tgt_share  <- round(candidate$veteran_target_share * 100, 1)
+        blocks <- c(blocks, paste0(
+          name, " — EPA/opportunity: ", candidate$veteran_epa_per_opp,
+          ", ", epa_pctile, "th percentile at position;",
+          " target share: ", tgt_share, "%, ", tgt_pctile, "th percentile",
+          low
+        ))
+      } else {
+        blocks <- c(blocks, paste0(
+          name, " — EPA/opportunity: ", candidate$veteran_epa_per_opp,
+          ", ", epa_pctile, "th percentile at position",
+          low
+        ))
+      }
     } else {
+      # Fallback: boxscore-prophet boom/start (skill positions only).
       p_start <- round(candidate$veteran_p_start * 100, 1)
       p_boom  <- round(candidate$veteran_p_boom_recal * 100, 1)
       blocks <- c(blocks, paste0(
