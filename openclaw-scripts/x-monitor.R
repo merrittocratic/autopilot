@@ -466,10 +466,23 @@ SKIP_KEYWORDS <- c(
   "democrat", "republican", "liberal", "conservative", "woke", "dei",
   "immigration", "abortion", "gun control", "protest",
   # Off-field conduct / legal incidents — not analytical-reply territory
-  # (2026-09-20: added after Keenan Allen DUI draft incident)
-  "drunk driving", "\\bdui\\b", "\\bdwi\\b",
-  "domestic violence", "sexual assault", "sexual harassment",
-  "was arrested", "facing arrest", "\\barraigned\\b"
+  # (2026-09-20: added after Keenan Allen DUI draft incident; hardened
+  # with \b word boundaries and coverage gaps closed per Earnest's audit
+  # request. Deliberately NOT adding bare "assault"/"battery" alone --
+  # both have real false-positive risk in ordinary sports metaphor
+  # ("assaulted that fastball," "an assault on the record book") that the
+  # qualified phrases below don't carry.
+  "\\bdrunk driving\\b", "\\bdui\\b", "\\bdwi\\b", "\\bowi\\b",
+  "\\bdomestic violence\\b", "\\bdomestic battery\\b",
+  "\\bsexual assault\\b", "\\bsexual harassment\\b",
+  # NOT a bare "\\barrest" prefix match -- caught "arrested the slide"/
+  # "arrested his decline" (a real sports-writing idiom for halting a
+  # bad trend) as a false positive during testing. Context-qualified
+  # phrasings below catch real arrest-reporting language without it.
+  "\\bwas arrested\\b", "\\bwere arrested\\b", "\\bgot arrested\\b",
+  "\\barrested for\\b", "\\barrested on\\b", "\\bunder arrest\\b",
+  "\\bfacing arrest\\b", "\\bindicted\\b", "\\barraigned\\b",
+  "\\bpleaded guilty\\b", "\\bpled guilty\\b", "\\bcriminal charges\\b"
 )
 
 # --- Auth --------------------------------------------------------------------
@@ -768,6 +781,23 @@ has_analytical_hook <- function(prospect_match, veteran_match, keyword_score,
 # prophet (start probability, boom recall) as fallback per MEMORY.md.
 # Returns "NONE" when no match data is present.
 # (2026-09-20: added to kill the "boom recal" label-leak incident)
+# Ordinal suffix (1st, 2nd, 3rd, 4th, ..., 11th-13th, 21st, ...) for
+# percentile citations below. 2026-09-20 -- every percentile in this
+# function previously hardcoded "th", which is wrong for any value ending
+# in 1, 2, or 3 (except 11-13) -- the majority of possible percentiles,
+# confirmed via "82th percentile"/"91th percentile" in testing.
+ordinal <- function(n) {
+  n <- as.integer(round(n))
+  last_two <- n %% 100
+  last_one <- n %% 10
+  suffix <- if (last_two %in% 11:13) "th"
+            else if (last_one == 1) "st"
+            else if (last_one == 2) "nd"
+            else if (last_one == 3) "rd"
+            else "th"
+  paste0(n, suffix)
+}
+
 format_model_data <- function(candidate) {
   blocks <- character(0)
 
@@ -797,7 +827,7 @@ format_model_data <- function(candidate) {
                          !is.na(candidate$veteran_epa_per_opp_pctile)
       epa_part <- if (epa_pctile_ok) {
         paste0("EPA/opportunity: ", candidate$veteran_epa_per_opp, ", ",
-               round(candidate$veteran_epa_per_opp_pctile * 100), "th percentile at position")
+               ordinal(candidate$veteran_epa_per_opp_pctile * 100), " percentile at position")
       } else {
         paste0("EPA/opportunity: ", candidate$veteran_epa_per_opp)
       }
@@ -812,7 +842,7 @@ format_model_data <- function(candidate) {
                         !is.na(candidate$veteran_target_share_pctile)
       tgt_part <- if (tgt_pctile_ok) {
         paste0("; target share: ", round(candidate$veteran_target_share * 100, 1), "%, ",
-               round(candidate$veteran_target_share_pctile * 100), "th percentile")
+               ordinal(candidate$veteran_target_share_pctile * 100), " percentile")
       } else if (tgt_ok) {
         paste0("; target share: ", round(candidate$veteran_target_share * 100, 1), "%")
       } else {
@@ -850,15 +880,15 @@ format_model_data <- function(candidate) {
     low   <- if (isTRUE(candidate$cfb_low_sample)) " (small sample)" else ""
     stats <- character(0)
     if (!is.null(candidate$cfb_qb_ypa_pctile) && !is.na(candidate$cfb_qb_ypa_pctile))
-      stats <- c(stats, paste0("YPA: ", round(candidate$cfb_qb_ypa_pctile * 100), "th percentile"))
+      stats <- c(stats, paste0("YPA: ", ordinal(candidate$cfb_qb_ypa_pctile * 100), " percentile"))
     if (!is.null(candidate$cfb_qb_cmp_pct_pctile) && !is.na(candidate$cfb_qb_cmp_pct_pctile))
-      stats <- c(stats, paste0("Cmp%: ", round(candidate$cfb_qb_cmp_pct_pctile * 100), "th percentile"))
+      stats <- c(stats, paste0("Cmp%: ", ordinal(candidate$cfb_qb_cmp_pct_pctile * 100), " percentile"))
     if (!is.null(candidate$cfb_qb_int_pct_pctile) && !is.na(candidate$cfb_qb_int_pct_pctile))
-      stats <- c(stats, paste0("INT%: ", round(candidate$cfb_qb_int_pct_pctile * 100), "th percentile"))
+      stats <- c(stats, paste0("INT%: ", ordinal(candidate$cfb_qb_int_pct_pctile * 100), " percentile"))
     if (!is.null(candidate$cfb_rush_ypc_pctile) && !is.na(candidate$cfb_rush_ypc_pctile))
-      stats <- c(stats, paste0("YPC: ", round(candidate$cfb_rush_ypc_pctile * 100), "th percentile"))
+      stats <- c(stats, paste0("YPC: ", ordinal(candidate$cfb_rush_ypc_pctile * 100), " percentile"))
     if (!is.null(candidate$cfb_rec_ypr_pctile) && !is.na(candidate$cfb_rec_ypr_pctile))
-      stats <- c(stats, paste0("YPR: ", round(candidate$cfb_rec_ypr_pctile * 100), "th percentile"))
+      stats <- c(stats, paste0("YPR: ", ordinal(candidate$cfb_rec_ypr_pctile * 100), " percentile"))
     if (length(stats) > 0) {
       blocks <- c(blocks, paste0(
         candidate$cfb_name, ", ", candidate$cfb_position, ", ", candidate$cfb_team,
@@ -879,17 +909,17 @@ format_model_data <- function(candidate) {
     low <- if (isTRUE(candidate$golf_low_sample)) " (small sample)" else ""
     gstats <- character(0)
     if (!is.null(candidate$golf_skill_pctile) && !is.na(candidate$golf_skill_pctile))
-      gstats <- c(gstats, paste0("skill: ", round(candidate$golf_skill_pctile * 100), "th percentile"))
+      gstats <- c(gstats, paste0("skill: ", ordinal(candidate$golf_skill_pctile * 100), " percentile"))
     if (!is.null(candidate$golf_sg_ott_pctile) && !is.na(candidate$golf_sg_ott_pctile))
-      gstats <- c(gstats, paste0("SG off-tee: ", round(candidate$golf_sg_ott_pctile * 100), "th"))
+      gstats <- c(gstats, paste0("SG off-tee: ", ordinal(candidate$golf_sg_ott_pctile * 100)))
     if (!is.null(candidate$golf_sg_app_pctile) && !is.na(candidate$golf_sg_app_pctile))
-      gstats <- c(gstats, paste0("approach: ", round(candidate$golf_sg_app_pctile * 100), "th"))
+      gstats <- c(gstats, paste0("approach: ", ordinal(candidate$golf_sg_app_pctile * 100)))
     if (!is.null(candidate$golf_sg_arg_pctile) && !is.na(candidate$golf_sg_arg_pctile))
-      gstats <- c(gstats, paste0("around-green: ", round(candidate$golf_sg_arg_pctile * 100), "th"))
+      gstats <- c(gstats, paste0("around-green: ", ordinal(candidate$golf_sg_arg_pctile * 100)))
     if (!is.null(candidate$golf_sg_putt_pctile) && !is.na(candidate$golf_sg_putt_pctile))
-      gstats <- c(gstats, paste0("putting: ", round(candidate$golf_sg_putt_pctile * 100), "th"))
+      gstats <- c(gstats, paste0("putting: ", ordinal(candidate$golf_sg_putt_pctile * 100)))
     if (!is.null(candidate$golf_form_trend_pctile) && !is.na(candidate$golf_form_trend_pctile))
-      gstats <- c(gstats, paste0("form trend: ", round(candidate$golf_form_trend_pctile * 100), "th percentile"))
+      gstats <- c(gstats, paste0("form trend: ", ordinal(candidate$golf_form_trend_pctile * 100), " percentile"))
 
     if (length(gstats) > 0) {
       blocks <- c(blocks, paste0(
