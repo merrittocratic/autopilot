@@ -81,13 +81,17 @@ call that day, not just this one.
 - If a stat in {model_data} is tagged "(small sample)", either hedge
   explicitly or leave it out -- don't state it with the confidence of a
   full-season number.
-- When {model_data} includes feature-store metrics (EPA/opportunity,
-  target share percentile, CFB/golf percentiles), lead with those --
-  they're the primary analytical content and the whole reason this
-  richer data exists. Only fall back to boom rate/bust rate/start
-  probability when no feature-store data is available for the matched
-  player; treat those as a last resort, not the default. Translate per
-  the jargon rule above either way.
+- When {model_data} includes feature-store metrics, use them -- they're
+  the primary analytical content. But don't default to EPA/opportunity
+  on every reply. Pick the metric that best sharpens the specific take:
+  - Tweet is about target volume, role, or workload? Lead with target share.
+  - Tweet is about deep targets, routes, or air yards? Lead with air yards share.
+  - Tweet is about efficiency or production value? Lead with EPA/opportunity.
+  - Tweet has its own compelling specific stat? Engage with that directly;
+    use the model metric as supporting context, not the hook.
+  Only fall back to boom rate/bust rate/start probability when no
+  feature-store data is available; treat those as a last resort, not
+  the default. Translate per the jargon rule above either way.
 - If you are not certain a fact you're about to state is drawn directly
   from the tweet text or {model_data}, return "SKIP" instead of guessing.
 
