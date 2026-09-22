@@ -457,6 +457,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("jaxson dart", "giants offense", "epa (expected points added)", "cpoe (completion % over expected)", "cam skattebo", "cincinnati bengals", "joe burrow", "week 1 nfl", "success rate", "passing epa", "quarterback efficiency", "expert consensus ranking", "run-efficiency", "fantasy points", "box score analysis"),
     summary = "Week 1 NFL box scores reveal which preseason narratives hold up and which don't through advanced metrics like EPA and CPOE."
   )
+,
+  list(
+    slug = "all-roads-lead-through-oxford",
+    keywords = c("trinidad chambliss", "darian mensah", "lincoln kienholz", "julian sayin", "ole miss rebels", "louisville cardinals", "ohio state buckeyes", "heisman trophy", "college football", "production index", "ranked wins", "dual-threat quarterback", "epa (expected points added)", "lsu football", "oxford mississippi"),
+    summary = "Ole Miss's Trinidad Chambliss emerges as Heisman frontrunner over rival QB Mensah due to superior strength of schedule and ranked victories."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
