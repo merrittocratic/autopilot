@@ -463,6 +463,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("trinidad chambliss", "darian mensah", "lincoln kienholz", "julian sayin", "ole miss rebels", "louisville cardinals", "ohio state buckeyes", "heisman trophy", "college football", "production index", "ranked wins", "dual-threat quarterback", "epa (expected points added)", "lsu football", "oxford mississippi"),
     summary = "Ole Miss's Trinidad Chambliss emerges as Heisman frontrunner over rival QB Mensah due to superior strength of schedule and ranked victories."
   )
+,
+  list(
+    slug = "htrae-bizzarro-world",
+    keywords = c("raiders", "saints", "texans", "chargers", "tyler shough", "ashton jeanty", "chris olave", "epa per play", "raiders defense", "saints offense", "raiders 2-0", "saints offense ranked 11th", "success rate", "cpoe", "completion percentage over expected"),
+    summary = "Surprising Raiders and Saints emerge as contenders early; their Week 3 matchup pits elite defense against elite offense."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
