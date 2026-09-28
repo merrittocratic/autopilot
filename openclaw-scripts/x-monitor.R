@@ -469,6 +469,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("raiders", "saints", "texans", "chargers", "tyler shough", "ashton jeanty", "chris olave", "epa per play", "raiders defense", "saints offense", "raiders 2-0", "saints offense ranked 11th", "success rate", "cpoe", "completion percentage over expected"),
     summary = "Surprising Raiders and Saints emerge as contenders early; their Week 3 matchup pits elite defense against elite offense."
   )
+,
+  list(
+    slug = "not-on-borrowed-time",
+    keywords = c("michigan football", "iowa hawkeyes", "bryce underwood", "kyle whittingham", "western michigan", "epa per play", "kirk ferentz", "college football", "hank brown", "jj buchanan", "reece vander zee", "usc defense", "florida gators", "unnecessary roughness", "efficiency metrics"),
+    summary = "Michigan's Week 2 loss to Iowa proves that statistical superiority doesn't guarantee wins."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
