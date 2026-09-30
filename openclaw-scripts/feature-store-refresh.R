@@ -292,15 +292,30 @@ refresh_cfb_features <- function(season = NULL) {
 # objects with the actual sg_ott/sg_app/sg_arg/sg_putt/sg_total fields.
 # flatten_dg_rounds() below reshapes that into one row per player-round.
 
-.dg_get <- function(path, params, api_key, simplify = TRUE) {
+.dg_get <- function(path, params, api_key, simplify = TRUE,
+                    max_tries = 4) {
   params[["key"]] <- api_key
   req <- request("https://feeds.datagolf.com") |>
     req_url_path_append(path) |>
     req_url_query(!!!params) |>
+    req_retry(
+      max_tries    = max_tries,
+      is_transient = \(resp) resp_status(resp) == 429L,
+      # Exponential backoff: 30s -> 60s -> 120s across up to 3 retries.
+      # Honours Retry-After header when DataGolf sends one.
+      backoff      = \(attempt) 30 * 2^(attempt - 1),
+      after        = \(resp) {
+        ra <- tryCatch(
+          as.numeric(resp_header(resp, "Retry-After")),
+          error = \(e) NA_real_
+        )
+        if (!is.na(ra) && ra > 0) ra else NULL
+      }
+    ) |>
     req_error(is_error = \(resp) FALSE)
   resp <- req_perform(req)
   if (resp_status(resp) != 200L) {
-    cli_abort("DataGolf API returned HTTP {resp_status(resp)} for {path}")
+    cli_abort("DataGolf API returned HTTP {resp_status(resp)} for {path} after {max_tries} attempts")
   }
   resp_body_json(resp, simplifyVector = simplify)
 }
