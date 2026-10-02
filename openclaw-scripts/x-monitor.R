@@ -475,6 +475,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("michigan football", "iowa hawkeyes", "bryce underwood", "kyle whittingham", "western michigan", "epa per play", "kirk ferentz", "college football", "hank brown", "jj buchanan", "reece vander zee", "usc defense", "florida gators", "unnecessary roughness", "efficiency metrics"),
     summary = "Michigan's Week 2 loss to Iowa proves that statistical superiority doesn't guarantee wins."
   )
+,
+  list(
+    slug = "the-good-the-bad-the-ugly",
+    keywords = c("buffalo bills", "kansas city chiefs", "houston texans", "dallas cowboys", "tampa bay buccaneers", "jacksonville jaguars", "las vegas raiders", "patrick mahomes", "josh allen", "kenneth walker iii", "james cook", "rashee rice", "travis kelce", "net epa", "fantasy football start/sit"),
+    summary = "Three weeks into the season, KC and Buffalo lead the AFC despite Jacksonville's superior efficiency, while Houston-Dallas and Tampa Bay struggle."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
