@@ -481,6 +481,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("buffalo bills", "kansas city chiefs", "houston texans", "dallas cowboys", "tampa bay buccaneers", "jacksonville jaguars", "las vegas raiders", "patrick mahomes", "josh allen", "kenneth walker iii", "james cook", "rashee rice", "travis kelce", "net epa", "fantasy football start/sit"),
     summary = "Three weeks into the season, KC and Buffalo lead the AFC despite Jacksonville's superior efficiency, while Houston-Dallas and Tampa Bay struggle."
   )
+,
+  list(
+    slug = "i-did-not-see-that-coming-and-two",
+    keywords = c("florida gators", "missouri tigers", "jamal roberts", "ap poll rankings", "epa per play", "offensive efficiency", "defensive epa", "rushing offense", "miami hurricanes", "big 12", "success rate", "competitive snaps", "heisman contender", "pass breakups", "garbage time"),
+    summary = "Florida's poll ranking crumbles after collapsing to Missouri, exposing systemic defensive breakdowns beyond schedule difficulty."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
