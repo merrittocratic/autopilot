@@ -487,6 +487,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("florida gators", "missouri tigers", "jamal roberts", "ap poll rankings", "epa per play", "offensive efficiency", "defensive epa", "rushing offense", "miami hurricanes", "big 12", "success rate", "competitive snaps", "heisman contender", "pass breakups", "garbage time"),
     summary = "Florida's poll ranking crumbles after collapsing to Missouri, exposing systemic defensive breakdowns beyond schedule difficulty."
   )
+,
+  list(
+    slug = "thats-offensive",
+    keywords = c("jacksonville jaguars", "trevor lawrence", "atlanta falcons", "michael penix jr.", "cooper rush", "epa efficiency", "cpoe completion percentage over expected", "offensive efficiency", "pass defense", "red zone touchdowns", "philadelphia eagles", "jalen hurts", "defense wins championships", "turnover dependent defense", "offensive playcalling coaches"),
+    summary = "Offensive firepower, not defense, is driving early 2026 contenders like Jacksonville and Atlanta."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
