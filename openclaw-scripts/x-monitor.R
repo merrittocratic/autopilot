@@ -493,6 +493,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("jacksonville jaguars", "trevor lawrence", "atlanta falcons", "michael penix jr.", "cooper rush", "epa efficiency", "cpoe completion percentage over expected", "offensive efficiency", "pass defense", "red zone touchdowns", "philadelphia eagles", "jalen hurts", "defense wins championships", "turnover dependent defense", "offensive playcalling coaches"),
     summary = "Offensive firepower, not defense, is driving early 2026 contenders like Jacksonville and Atlanta."
   )
+,
+  list(
+    slug = "is-this-the-real-life",
+    keywords = c("texas longhorns", "oklahoma football", "arch manning", "epa per play", "offensive efficiency", "georgia defense", "indiana defending champion", "ap poll", "college football", "week 6 rankings", "peyton bowen pick-six", "courtland guillory interception", "ohio state collapse", "win streak", "quarterback performance"),
+    summary = "Texas's collapse to Oklahoma reveals sustained offensive dysfunction rather than a single-game collapse."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
@@ -666,24 +672,29 @@ parse_engaged_accounts <- function() {
 # --- Resolve usernames to IDs -----------------------------------------------
 
 resolve_user_ids <- function(usernames, token) {
-  # X API v2 allows up to 100 usernames per request
+  # Resolve handles one at a time so a single slow or missing account
+  # cannot abort the entire monitor run.
   ids <- list()
-  chunks <- split(usernames, ceiling(seq_along(usernames) / 100))
   
-  for (chunk in chunks) {
-    resp <- GET(
-      "https://api.twitter.com/2/users/by",
-      config = config(token = token),
-      query = list(
-        usernames = paste(chunk, collapse = ","),
-        "user.fields" = "id,username"
-      )
+  for (username in usernames) {
+    resp <- tryCatch(
+      GET(
+        "https://api.twitter.com/2/users/by",
+        config = config(token = token),
+        query = list(
+          usernames = username,
+          "user.fields" = "id,username"
+        )
+      ),
+      error = function(e) NULL
     )
     
-    if (status_code(resp) == 200) {
+    if (!is.null(resp) && status_code(resp) == 200) {
       data <- content(resp)$data
-      for (user in data) {
-        ids[[user$username]] <- user$id
+      if (length(data) > 0) {
+        for (user in data) {
+          ids[[user$username]] <- user$id
+        }
       }
     }
     Sys.sleep(1)  # Rate limit courtesy
