@@ -499,6 +499,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("texas longhorns", "oklahoma football", "arch manning", "epa per play", "offensive efficiency", "georgia defense", "indiana defending champion", "ap poll", "college football", "week 6 rankings", "peyton bowen pick-six", "courtland guillory interception", "ohio state collapse", "win streak", "quarterback performance"),
     summary = "Texas's collapse to Oklahoma reveals sustained offensive dysfunction rather than a single-game collapse."
   )
+,
+  list(
+    slug = "its-not-me-its-you",
+    keywords = c("marvin harrison jr.", "arizona cardinals", "c.j. stroud", "dak prescott", "jayden daniels", "dan quinn", "mike lafleur", "trey mcbride", "target share", "separation yards", "epa per target", "contested catches", "jeremiah love", "yards per carry", "offensive snaps"),
+    summary = "Young elite talents underperform due to coaching misuse rather than individual shortcomings."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
