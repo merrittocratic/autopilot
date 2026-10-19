@@ -505,6 +505,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("marvin harrison jr.", "arizona cardinals", "c.j. stroud", "dak prescott", "jayden daniels", "dan quinn", "mike lafleur", "trey mcbride", "target share", "separation yards", "epa per target", "contested catches", "jeremiah love", "yards per carry", "offensive snaps"),
     summary = "Young elite talents underperform due to coaching misuse rather than individual shortcomings."
   )
+,
+  list(
+    slug = "hold-onto-your-butts",
+    keywords = c("georgia auburn", "notre dame byu", "texas florida", "ohio state indiana", "alabama tennessee", "ap poll", "24-team playoff", "college football playoff", "c.j. carr", "net epa", "22-game win streak", "notre dame automatic bid", "top 8 losses", "playoff resume", "miami ohio state byu undefeated"),
+    summary = "Five top-8 AP poll teams lost Saturday, including #1 Georgia and #2 Notre Dame, marking historic chaos for playoff contenders."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
