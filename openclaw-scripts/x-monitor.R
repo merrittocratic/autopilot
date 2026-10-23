@@ -511,6 +511,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("georgia auburn", "notre dame byu", "texas florida", "ohio state indiana", "alabama tennessee", "ap poll", "24-team playoff", "college football playoff", "c.j. carr", "net epa", "22-game win streak", "notre dame automatic bid", "top 8 losses", "playoff resume", "miami ohio state byu undefeated"),
     summary = "Five top-8 AP poll teams lost Saturday, including #1 Georgia and #2 Notre Dame, marking historic chaos for playoff contenders."
   )
+,
+  list(
+    slug = "the-leasts-of-the-east",
+    keywords = c("nfc east", "dallas cowboys", "philadelphia eagles", "new york giants", "washington commanders", "division winner", "sub-.500 record", "detroit lions", "buffalo bills", "super bowl", "jalen hurts", "net epa", "offensive efficiency", "inter-division play", "point differential"),
+    summary = "The NFC East is historically bad, going winless outside division play while the division winner could finish under .500."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
