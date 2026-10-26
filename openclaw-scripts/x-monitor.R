@@ -517,6 +517,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("nfc east", "dallas cowboys", "philadelphia eagles", "new york giants", "washington commanders", "division winner", "sub-.500 record", "detroit lions", "buffalo bills", "super bowl", "jalen hurts", "net epa", "offensive efficiency", "inter-division play", "point differential"),
     summary = "The NFC East is historically bad, going winless outside division play while the division winner could finish under .500."
   )
+,
+  list(
+    slug = "inconceivable",
+    keywords = c("byu", "ucf", "notre dame", "bear bachmeier", "ranked upset", "double overtime", "net epa", "keyone jenkins", "legend glasker", "josh derry", "grayson brousseau", "top-ranked team loss", "unranked opponent", "college football upset", "2026 season"),
+    summary = "BYU's #2 ranking crumbles in double-overtime loss to unranked UCF, continuing a trend of top-ranked upsets."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
