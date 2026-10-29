@@ -523,6 +523,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("byu", "ucf", "notre dame", "bear bachmeier", "ranked upset", "double overtime", "net epa", "keyone jenkins", "legend glasker", "josh derry", "grayson brousseau", "top-ranked team loss", "unranked opponent", "college football upset", "2026 season"),
     summary = "BYU's #2 ranking crumbles in double-overtime loss to unranked UCF, continuing a trend of top-ranked upsets."
   )
+,
+  list(
+    slug = "always-watching",
+    keywords = c("nfl north divisions", "nfc north", "afc north", "minnesota vikings", "kyler murray", "j.j. mccarthy", "new york giants", "net epa", "offensive efficiency", "defensive efficiency", "red zone touchdown rate", "passer rating", "divisional record", "strength of schedule", "sack rate"),
+    summary = "North divisions' dominant records mask weak schedules; Vikings' offense struggles despite 6-0 start."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
