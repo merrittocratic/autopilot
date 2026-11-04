@@ -92,14 +92,31 @@ monitoring feedback (`x-surfacing-log.sh`, `x-feedback-log.sh`) and, since
 2026-07-13, the review helpers (`x-review.sh`, `linkedin-review.sh`) that
 act on the queue and post approved content. The autopilot side still never
 receives Telegram input directly — Earnest is always the inbound boundary.
+**Exception (2026-11-04):** launchd-scheduled script jobs may send plain
+one-way notifications with `sendMessage` (no `reply_markup`, no polling), as
+`morning-sports-digest.R`, `x-weekly-digest.R` and `x-daily-note.R` do.
+Anything with buttons or a reply flow still goes through Earnest.
 The Bundle #3 fix (commit `a0c0bd7`, 2026-06-13) established this contract.
 See OpenClaw-Ops `journal/2026-W24.md` for the full architecture.
 
-### Cron-Only on the Mac Mini
-All recurring work on the Mac Mini runs via `openclaw cron` jobs. There is no
-heartbeat loop or persistent listener. Do NOT propose heartbeat-style checks,
-long-poll listeners, or any persistent process for scheduled work. See
-"Heartbeat Architecture Deprecated" entry in OpenClaw-Ops `journal/2026-W24.md`.
+### Scheduling on the Mac Mini: launchd for Script Jobs
+(Updated 2026-11-04; supersedes the W24 "Cron-Only" decision. See OpenClaw-Ops
+`journal/2026-W45.md`.)
+- **Any scheduled job that runs a repo script is a launchd LaunchAgent plist**,
+  per the global CLAUDE.md "Scheduling on the Mac Mini" rules: committed at
+  `deploy/launchd/com.merritt.autopilot.<job>.plist` with `__REPO__`/`__HOME__`
+  placeholders, `ProgramArguments` going through `scripts/autopilot-env.sh`,
+  installed with `launchctl bootstrap`. Build the plist with the script, not
+  as a later step. First example: `com.merritt.autopilot.x-daily-note.plist`.
+- **`openclaw cron` is allowed only for jobs that need Earnest's agent turn**:
+  the LLM drafting step plus Telegram button sends (today: `x-monitor-fast`,
+  `x-monitor-slow`, `rss-check`). A plist can't hand work to Earnest.
+- **Never system `crontab`** on the Mini, and never offer it as a fallback.
+- Existing script-only `openclaw cron` jobs and the two legacy plists in
+  `launchd/` move over in a separate migration pass. Don't move them as a
+  side effect of other work.
+- No heartbeat loop or persistent listener. Do NOT propose heartbeat-style
+  checks, long-poll listeners, or any persistent process for scheduled work.
 
 ---
 
@@ -178,10 +195,12 @@ third variation.
 - Suggest switching to Python — R is the stack, googlesheets4/httr2/rvest cover
   everything needed
 - Call the Telegram bot API directly from autopilot scripts with `reply_markup` /
-  inline_keyboard — Earnest (via OpenClaw) owns bot I/O. Scripts persist JSONL
-  logs only.
-- Propose heartbeat-style listeners or persistent polling on the Mac Mini — all
-  recurring work runs via `openclaw cron`.
+  inline_keyboard, or poll `getUpdates` -- Earnest (via OpenClaw) owns bot I/O.
+  Plain one-way `sendMessage` notifications from launchd jobs are allowed.
+- Propose heartbeat-style listeners or persistent polling on the Mac Mini.
+- Schedule a script-only job with `openclaw cron` or system `crontab` -- it
+  gets a launchd plist in `deploy/launchd/`. `openclaw cron` is only for jobs
+  that need Earnest's agent turn.
 - Restore the `~/.openclaw/workspace/scripts/` mirror or any copy-back sync
   pattern — single source of truth is `~/autopilot/openclaw-scripts/`.
 - Silently change any locked-in decision above
