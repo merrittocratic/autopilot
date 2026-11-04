@@ -2,6 +2,8 @@
 # ============================================================================
 # x-feedback-log.R -- append a feedback bucket record to JSONL log
 # ============================================================================
+# 2026-11-04 -- Accept optional option_index / option_style (which of the
+#               up-to-three drafted options Steve posted or edited).
 # This script does NOT touch Telegram. Telegram callback_query events
 # are routed by OpenClaw to Earnest; Earnest parses the callback_data
 # ("fb:{tweet_id}:{bucket_code}"), ACKs via OpenClaw, then pipes the
@@ -64,7 +66,9 @@ entry <- list(
   callback_id   = input$callback_id %||% NA_character_,
   message_id    = input$message_id %||% NA,
   chat_id       = input$chat_id %||% NA_character_,
-  from_user     = input$from_user %||% NA_character_
+  from_user     = input$from_user %||% NA_character_,
+  option_index  = input$option_index %||% NA,
+  option_style  = input$option_style %||% NA_character_
 )
 
 dir.create(dirname(FEEDBACK_LOG), showWarnings = FALSE, recursive = TRUE)

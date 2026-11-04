@@ -43,8 +43,62 @@ Shell wrapper for `x-monitor.R`. Injects keychain secrets via
 `scripts/autopilot-env.sh`, then calls the R script. Forwards all
 arguments through, so `x-monitor.sh --tier 1A` works as expected.
 
+Every scan also appends each fetched tweet (before any filtering, and
+even after the daily surfacing cap is reached) to
+`data/x-daily-cache/YYYY-MM-DD.jsonl` (ET date) for `x-daily-note.R`.
+
+### `x-daily-note.R`
+5pm ET end-of-day roundup, scheduled by **launchd**
+(`deploy/launchd/com.merritt.autopilot.x-daily-note.plist`), not
+`openclaw cron`. Reads today's `data/x-daily-cache/` file (deduped on
+`tweet_id`, last line wins), joins surfacings and feedback, ranks tweets
+by engagement + relevance, and calls `claude-opus-5-5` with
+`prompts/substack_note_daily_system.md` to cluster the day into stories
+and draft ONE Substack Note on the top story plus 2-4 runners-up.
+Writes `staging/notes/YYYY-MM-DD_daily_note.md`, sends the draft to
+Telegram as a plain one-way `sendMessage` (split under 4096 chars, no
+buttons), and prints a JSON result. If there's no cache for the day it
+sends a short "check x-monitor" ping instead. Prunes cache files older
+than 14 days.
+
+Flags: `--date YYYY-MM-DD` (re-run a past day), `--dry-run` (ranking
+summary only, no API call, no send), `--no-send` (draft + file, skip
+Telegram). Manual run with secrets:
+`scripts/autopilot-env.sh /opt/homebrew/bin/Rscript openclaw-scripts/x-daily-note.R --no-send`
+
+### Reply drafting (2026-11-04 rewrite)
+`prompts/x_reply_tier_*.md` return up to three options per candidate, one
+per register, as lines starting `OPTION 1 (data):`, `OPTION 2 (needle):`,
+`OPTION 3 (verdict):`, or the single word `SKIP`. Placeholders filled by
+Earnest's drafting step: `{reply_voice_sample}` (verbatim contents of
+`data/voice-sample/reply_voice_sample.txt`; replaces `{voice_sample}`),
+`{username}`, `{tweet_text}`, `{model_data}` (empty string when absent,
+never "null"), `{article_summary}`. Everything above each prompt's
+"Caching note" line is identical across all five files. Options may
+contain `[STAT: ...]` placeholders for Steve to fill; the posting path
+must refuse any text that still contains `[STAT:`. Run each option
+through `x-length-check.R` and `x-fact-check.R` before surfacing.
+
+### `reply-voice-sample-refresh.R`
+Weekly (launchd, `deploy/launchd/com.merritt.autopilot.reply-voice-sample.plist`,
+Mondays 6am ET). Pulls @Merrittocratic's last ~200 posts via the X API,
+keeps hand-written replies, and writes the top 25 by engagement as
+"They posted / Steve replied" pairs to
+`data/voice-sample/reply_voice_sample.txt`. Rewrites only when the selected
+set changes (cache-friendly). Needs X creds: run via
+`scripts/autopilot-env.sh`. `--dry-run` prints without writing.
+
+### `x-length-check.R`
+Character-budget gate, once per option. Ceiling 320 (was 240). Reports
+`has_placeholder` / `placeholders` for `[STAT: ...]` slots.
+
 ### `x-fact-check.R` / `x-fact-check.sh`
-Tier-2-only post-draft verification gate (see `SPEC-tier2-fact-check.md`).
+Post-draft verification gate, **all tiers, once per option** since
+2026-11-04 (was Tier 2 only, see `SPEC-tier2-fact-check.md`). Treats
+`[STAT: ...]` placeholders, opinions, sarcasm and rhetorical questions as
+non-claims, and takes the tweet's own content as given. 2026-11-04 also
+fixed a bug where any check that used web search returned "could not
+parse" and was suppressed as `failed_skipped`.
 Reads `{"candidate": {...}, "tweet_text": "...", "draft": "..."}` from
 stdin, returns `{"fact_check": "passed"|"failed_skipped"|"failed_stripped"|
 "skipped_no_claims", "draft": "...", "failed_claims": [...], "notes": "..."}`
@@ -142,5 +196,7 @@ State files are runtime-managed and live outside the repo (gitignored):
   `x-surfacing-log.R`).
 - `~/autopilot/data/x-monitor-feedback.jsonl` — append log of each
   feedback bucket received (written by `x-feedback-log.R`).
+- `~/autopilot/data/x-daily-cache/YYYY-MM-DD.jsonl` -- every tweet
+  `x-monitor.R` fetched that day (read and pruned by `x-daily-note.R`).
 
 Do not modify these from a Claude Code session.

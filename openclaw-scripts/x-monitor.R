@@ -22,6 +22,9 @@ suppressPackageStartupMessages({
 })
 
 # --- Config ------------------------------------------------------------------
+# 2026-11-04 -- Append every fetched tweet (pre-filter) to a per-day JSONL
+#              cache for x-daily-note.R, and keep fetching after the daily
+#              surfacing cap is hit (cache only, no new candidates).
 # 2026-08-31 — Add veteran-player matching against boxscore-prophet's
 #              output/latest/scored_slate.csv (soft-optional, staleness-gated).
 # 2026-08-31 — Drop candidate prospect fields when the matched row has NA
@@ -63,6 +66,13 @@ BOXSCORE_MAX_AGE_DAYS   <- 8   # weekly refresh cadence + buffer
 FEATURE_STORE_DIR          <- file.path(AUTOPILOT, "data", "feature-store")
 FEATURE_STORE_MANIFEST     <- file.path(FEATURE_STORE_DIR, "manifest.json")
 FEATURE_STORE_MAX_AGE_DAYS <- 2   # daily refresh cadence + buffer
+
+# Per-day cache of every tweet this script fetches, read by x-daily-note.R.
+# Append-only so the fast and slow lanes can write concurrently; each run
+# re-reads overlapping windows, so readers dedupe on tweet_id (last line
+# wins = freshest engagement numbers). Dated in ET to match Steve's day.
+DAILY_CACHE_DIR <- file.path(AUTOPILOT, "data", "x-daily-cache")
+DAILY_CACHE_TZ  <- "America/New_York"
 
 # Daily caps
 MAX_REPLIES_PER_DAY    <- 3   # API-eligible replies (engaged accounts only)
@@ -661,6 +671,40 @@ select_candidates_with_reservations <- function(candidates, remaining_total, sta
 
   remaining_candidates <- candidates[!map_chr(candidates, ~ .x$tweet_id) %in% selected_ids]
   c(selected, take_candidates(remaining_candidates, remaining_slots))
+}
+
+# --- Daily tweet cache -------------------------------------------------------
+# Failures here must never break the scan -- the cache is a side channel.
+append_daily_cache <- function(tweet, tier, scoring) {
+  tryCatch({
+    day  <- format(Sys.time(), "%Y-%m-%d", tz = DAILY_CACHE_TZ)
+    path <- file.path(DAILY_CACHE_DIR, paste0(day, ".jsonl"))
+    dir.create(DAILY_CACHE_DIR, showWarnings = FALSE, recursive = TRUE)
+    entry <- list(
+      fetched_at_utc       = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+      tweet_id             = tweet$id,
+      username             = tweet$username,
+      tier                 = tier,
+      created_at           = tweet$created_at,
+      text                 = tweet$text,
+      quoted_text          = tweet$quoted_text %||% NA_character_,
+      impressions          = tweet$impressions,
+      likes                = tweet$likes,
+      retweets             = tweet$retweets,
+      replies              = tweet$replies,
+      relevance_score      = scoring$score,
+      reason               = scoring$reason,
+      matched_article_slug = scoring$matched_article$slug %||% NA_character_,
+      prospect_match       = isTRUE(scoring$prospect_match),
+      veteran_match        = isTRUE(scoring$veteran_match),
+      cfb_match            = isTRUE(scoring$cfb_match),
+      golf_match           = isTRUE(scoring$golf_match)
+    )
+    cat(toJSON(entry, auto_unbox = TRUE, na = "null"), "\n", sep = "",
+        file = path, append = TRUE)
+  }, error = function(e) {
+    message("WARN: daily cache append failed for tweet ", tweet$id, ": ", conditionMessage(e))
+  })
 }
 
 # --- Parse monitor list ------------------------------------------------------
@@ -1355,13 +1399,12 @@ state <- read_state()
 # 2026-06-29 — Allow run to continue when total cap is exhausted if reserved
 # 1A/1B slots have not yet been consumed. Without this, 1C newsbreaks can burn
 # the entire daily budget and leave no room for later 1A/1B candidates.
-if (!is.null(state$daily_candidate_count) &&
-    state$daily_candidate_count >= MAX_CANDIDATES_PER_DAY) {
-  if (sum(remaining_reserved_slots(state)) <= 0L) {
-    cat("[]")
-    quit(save = "no")
-  }
-}
+# 2026-11-04 -- No longer quits here: the scan keeps running so the daily
+# cache (x-daily-note.R) sees the whole day, but surfacing_closed blocks
+# any new candidates.
+surfacing_closed <- !is.null(state$daily_candidate_count) &&
+  state$daily_candidate_count >= MAX_CANDIDATES_PER_DAY &&
+  sum(remaining_reserved_slots(state)) <= 0L
 
 token            <- build_token()
 monitor          <- parse_monitor_list_with_tiers()
@@ -1429,9 +1472,13 @@ for (i in seq_len(nrow(monitor))) {
                               include_retweets = tier == "1A")
 
   for (tweet in tweets) {
-    if (tweet$id %in% state$seen_tweet_ids) next
-
+    # Score + cache before the seen/surface gates so the daily cache holds
+    # every fetched tweet, with refreshed engagement on each re-read.
     scoring <- score_tweet(tweet, tier, model_data, veteran_data, cfb_data, golf_data)
+    append_daily_cache(tweet, tier, scoring)
+
+    if (surfacing_closed) next
+    if (tweet$id %in% state$seen_tweet_ids) next
     if (!isTRUE(scoring$should_surface)) next
 
     handle_lower <- str_to_lower(tweet$username)

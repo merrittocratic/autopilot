@@ -17,4 +17,19 @@ lines are ignored.
 
 ## Engaged accounts
 
-# (populate by copying from the prior Mac Mini workspace copy on next pull)
+# 2026-11-04 -- Seeded from @Merrittocratic's last 100 posts: monitored
+# accounts Steve has replied to by hand, plus the Ohio State accounts added
+# to x-monitor-list.md the same day. Earnest: merge in anything from the
+# old Mac Mini workspace copy if it still exists.
+@AdamSchefter
+@PFF
+@PFF_College
+@SharpFootball
+@danorlovsky7
+@JoshPateCFB
+@ColinCowherd
+@TheHerd
+@TheBuckeyeNut
+@TheHoody27
+@BuckeyeNatty
+@11W

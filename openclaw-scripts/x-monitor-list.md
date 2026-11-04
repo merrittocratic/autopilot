@@ -48,6 +48,15 @@ each line. Edit this file to promote/demote accounts.
 
 ### Sports media
 - @TheRingerNFL [tier:1B] — Ringer NFL coverage
+- @danorlovsky7 [tier:2] -- Dan Orlovsky, ESPN, QB film and takes
+
+## College Football / Ohio State
+
+### Fan + local media (2026-11-04 -- where Steve's own replies get the most traction)
+- @TheBuckeyeNut [tier:1B] -- Ohio State fan/news account
+- @TheHoody27 [tier:1B] -- Ohio State fan account, recruiting and QB takes
+- @BuckeyeNatty [tier:1B] -- Ohio State fan account
+- @11W [tier:1B] -- Eleven Warriors, Ohio State site
 
 ## Golf
 

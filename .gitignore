@@ -6,6 +6,7 @@ logs/*
 data/feed_state.json
 data/x-monitor-surfacings.jsonl
 data/x-monitor-feedback.jsonl
+data/x-daily-cache/
 data/feature-store/
 data/voice-sample/
 *service-account*.json

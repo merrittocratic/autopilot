@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Merrittocracy Autopilot -- Reply voice sample refresh (Mondays 6:00am local, ET on the Mini)
+    2026-11-04 -- Initial version.
+
+    Rebuilds data/voice-sample/reply_voice_sample.txt from Steve's top hand-written X replies.
+    Secrets come from the Keychain via scripts/autopilot-env.sh; none live here.
+
+    Install (from the repo root on the Mac Mini):
+      sed -e "s|__REPO__|$PWD|g" -e "s|__HOME__|$HOME|g" \
+        deploy/launchd/com.merritt.autopilot.reply-voice-sample.plist \
+        > ~/Library/LaunchAgents/com.merritt.autopilot.reply-voice-sample.plist
+      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.merritt.autopilot.reply-voice-sample.plist
+
+    Verify:     launchctl print gui/$(id -u)/com.merritt.autopilot.reply-voice-sample
+    Test-fire:  launchctl kickstart gui/$(id -u)/com.merritt.autopilot.reply-voice-sample
+    Unload:     launchctl bootout gui/$(id -u)/com.merritt.autopilot.reply-voice-sample
+  -->
+
+  <key>Label</key>
+  <string>com.merritt.autopilot.reply-voice-sample</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO__/scripts/autopilot-env.sh</string>
+    <string>/opt/homebrew/bin/Rscript</string>
+    <string>__REPO__/openclaw-scripts/reply-voice-sample-refresh.R</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:__HOME__/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key>
+    <string>__HOME__</string>
+  </dict>
+
+  <!-- Mondays 06:00 in the Mini's local timezone (ET); Weekday 1 = Monday -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- logs/ is tracked via logs/.gitkeep, so it exists on every checkout -->
+  <key>StandardOutPath</key>
+  <string>__REPO__/logs/launchd_reply_voice_sample_stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO__/logs/launchd_reply_voice_sample_stderr.log</string>
+
+  <key>KeepAlive</key>
+  <false/>
+</dict>
+</plist>

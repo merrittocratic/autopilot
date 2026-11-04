@@ -94,6 +94,25 @@ launchctl list | grep merrittocratic
 
 The check job runs every 15 minutes. The post job runs every 5 minutes as a fallback path when approved items exist in the queue.
 
+New plists follow the `deploy/launchd/` convention (`__REPO__`/`__HOME__`
+placeholders substituted at install). The daily X Substack Note job
+(5:00pm ET):
+
+```bash
+# From the repo root on the Mac Mini
+L=com.merritt.autopilot.x-daily-note
+sed -e "s|__REPO__|$PWD|g" -e "s|__HOME__|$HOME|g" \
+  deploy/launchd/$L.plist > ~/Library/LaunchAgents/$L.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/$L.plist
+
+launchctl print gui/$(id -u)/$L      # verify
+launchctl kickstart gui/$(id -u)/$L  # test-fire (sends to Telegram)
+launchctl bootout gui/$(id -u)/$L    # unload
+```
+
+The weekly reply-voice refresh (Mondays 6:00am ET) installs the same way
+with `L=com.merritt.autopilot.reply-voice-sample`.
+
 ## Workflow
 
 1. Publish a Substack post as normal
@@ -155,6 +174,9 @@ autopilot/
 ├── prompts/
 │   ├── thread_draft_system.md
 │   └── linkedin_post_system.md
+|-- deploy/launchd/          # new-convention plists (__REPO__/__HOME__)
+|   |-- com.merritt.autopilot.reply-voice-sample.plist
+|   `-- com.merritt.autopilot.x-daily-note.plist
 ├── launchd/
 │   ├── com.merrittocratic.autopilot.check.plist
 │   └── com.merrittocratic.autopilot.post.plist

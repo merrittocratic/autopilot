@@ -1,7 +1,25 @@
 #!/usr/bin/env Rscript
 # ============================================================================
-# x-fact-check.R -- Tier-2 drafted-reply fact-check gate
+# x-fact-check.R -- drafted-reply fact-check gate (all tiers as of 2026-11-04)
 # ============================================================================
+# 2026-11-04 -- Reply rewrite support: [STAT: ...] placeholders are slots
+#               Steve fills, never claims (ignored by the no-claims gate and
+#               protected from stripping); opinions, verdicts, sarcasm and
+#               rhetorical questions are explicitly not claims, so the gate
+#               stops flattening the sharpest line. Scope widened to all
+#               tiers (Steve, 2026-11-04): the rewritten prompts take sharper
+#               swings and the 2026-11-04 test run showed narrative-level
+#               background claims slipping into 1C/1A drafts. Volume check:
+#               <= 8 candidates/day x <= 3 options, many skipped by the
+#               regex gate, on Haiku -- well under $0.10/day.
+#               Also fixed a parse bug: after a web_search the response is
+#               several text blocks of prose, and only the last block was
+#               parsed, so every search-triggering draft came back
+#               "could not parse" -> failed_skipped (silently suppressed).
+#               Now all text blocks are joined and the last JSON object
+#               with a "pass" field is extracted. And the tweet's own
+#               content is treated as given: search lags breaking news, and
+#               a test run failed a draft for "disputing" the tweet's trade.
 # 2026-09-02 -- Initial build, per SPEC-tier2-fact-check.md (approved by
 #               Steve 2026-09-02). Follow-up to the 2026-08-31 fabrication
 #               incident (8bd4ca7, bc2466e): those fixes stop bad *data*
@@ -39,8 +57,8 @@
 #     - Append the `fact_check` value to the surfacing record when piping to
 #       x-surfacing-log.R (accepts an optional `fact_check` field).
 #
-# Scope: Tier 2 only, per spec -- do not call this for Tier 1A/1B/1C drafts
-# without re-checking cost/volume first (see SPEC-tier2-fact-check.md).
+# Scope: all tiers, once per drafted option (2026-11-04; was Tier 2 only per
+# SPEC-tier2-fact-check.md -- volume re-checked, see header note).
 # ============================================================================
 
 suppressPackageStartupMessages({
@@ -66,7 +84,12 @@ HAIKU_MODEL   <- "claude-haiku-4-5"
 # spending a call on drafts with nothing to check (pure opinion/banter).
 # Triggers on: a run of 2+ capitalized words (player/team names) OR any digit
 # (stats, percentages, years).
+PLACEHOLDER_REGEX <- "\\[STAT:[^\\]]*\\]"
+
 has_verifiable_claims <- function(text) {
+  # Placeholders are capitalized ("[STAT: Texans sack rate]") and would trip
+  # the name regex on their own -- they're slots, not claims.
+  text <- str_remove_all(text, PLACEHOLDER_REGEX)
   if (!nzchar(str_trim(text))) return(FALSE)
   name_like <- str_detect(text, "\\b([A-Z][a-zA-Z'.-]*\\s+){1,3}[A-Z][a-zA-Z'.-]*\\b")
   digit_like <- str_detect(text, "\\d")
@@ -172,18 +195,47 @@ call_haiku <- function(messages, tools) {
   attempt(NULL)
 }
 
+# Web-search responses split the answer across several text blocks (prose,
+# citations, then the verdict), so join them all rather than trusting the
+# last block.
 extract_text <- function(resp) {
   if (is.null(resp) || is.null(resp$content)) return("")
   text_blocks <- Filter(function(b) identical(b$type, "text"), resp$content)
   if (length(text_blocks) == 0) return("")
-  text_blocks[[length(text_blocks)]]$text %||% ""
+  paste(vapply(text_blocks, function(b) b$text %||% "", character(1)), collapse = "\n")
 }
 
+# Returns the last balanced {...} object in the text that parses as JSON
+# and has a "pass" field. Brace matching skips over quoted strings so a "}"
+# inside a claim doesn't end the object early.
 parse_final_json <- function(text) {
-  cleaned <- str_trim(text)
-  cleaned <- str_remove(cleaned, "^```(json)?\\s*")
-  cleaned <- str_remove(cleaned, "\\s*```$")
-  fromJSON(cleaned, simplifyVector = FALSE)
+  chars  <- strsplit(text, "")[[1]]
+  starts <- which(chars == "{")
+  found  <- NULL
+  for (st in starts) {
+    depth <- 0; in_str <- FALSE; esc <- FALSE; end <- NA_integer_
+    for (i in st:length(chars)) {
+      ch <- chars[i]
+      if (in_str) {
+        if (esc) esc <- FALSE
+        else if (ch == "\\") esc <- TRUE
+        else if (ch == "\"") in_str <- FALSE
+      } else if (ch == "\"") {
+        in_str <- TRUE
+      } else if (ch == "{") {
+        depth <- depth + 1
+      } else if (ch == "}") {
+        depth <- depth - 1
+        if (depth == 0) { end <- i; break }
+      }
+    }
+    if (is.na(end)) next
+    obj <- tryCatch(fromJSON(paste(chars[st:end], collapse = ""), simplifyVector = FALSE),
+                    error = function(e) NULL)
+    if (is.list(obj) && !is.null(obj$pass)) found <- obj
+  }
+  if (is.null(found)) stop("no JSON verdict object found in response")
+  found
 }
 
 extract_model_fields <- function(candidate) {
@@ -227,9 +279,22 @@ check_once <- function(draft, tweet_text, model_fields_text) {
     "web_search tool (one search) to check it -- not both, and only once ",
     "total. If you can't resolve a claim with at most one lookup, treat it ",
     "as unverifiable and fail it.\n\n",
+    "Treat everything the tweet itself states as true, even if a search ",
+    "can't confirm it -- breaking news is often minutes old. Never fail a ",
+    "draft because of the tweet's premise; only check what the draft adds.\n\n",
+    "NOT claims, never fail or strip these: (1) placeholders in square ",
+    "brackets like [STAT: Texans sack rate rank], which the human fills in ",
+    "before posting -- keep them exactly as written; (2) opinions, verdicts, ",
+    "predictions, sarcasm, jokes and rhetorical questions (\"Lamar is washed\", ",
+    "\"Bad take\", \"Who's overrated now?\"). Only checkable statements of fact ",
+    "count: names tied to events, stats, results, contracts, draft slots, ",
+    "ages, records, standings, past trades.\n\n",
+    "When stripping, remove only the failed factual clause and keep the ",
+    "take, its tone, and any placeholders intact.\n\n",
     "Tweet text: {tweet_text}\n\n",
     "Drafted reply: {draft}\n\n",
     "Structured data available to the drafter:\n{model_fields_text}\n\n",
+    "If you search, still end your answer with the JSON verdict. ",
     "Respond with ONLY valid JSON (no markdown fences), in this exact shape:\n",
     '{{"pass": true|false, "failed_claims": ["claim -- why it fails"], ',
     '"stripped_draft": "draft text with only the failed claim(s) removed, ',
@@ -258,9 +323,14 @@ check_once <- function(draft, tweet_text, model_fields_text) {
     messages2 <- c(
       messages,
       list(list(role = "assistant", content = resp1$content)),
-      list(list(role = "user", content = list(list(
-        type = "tool_result", tool_use_id = tb$id, content = lookup_result
-      ))))
+      # Without the nudge, the tool-less follow-up sometimes ends with "I
+      # should verify..." and no verdict at all (2026-11-04 test runs).
+      list(list(role = "user", content = list(
+        list(type = "tool_result", tool_use_id = tb$id, content = lookup_result),
+        list(type = "text", text = paste(
+          "That was your one lookup; no more are available. Give the final",
+          "JSON verdict now, treating anything still unconfirmed as failed."))
+      )))
     )
     resp2 <- call_haiku(messages2, tools = NULL)
     final_text <- extract_text(resp2)
@@ -270,6 +340,9 @@ check_once <- function(draft, tweet_text, model_fields_text) {
 
   parsed <- tryCatch(parse_final_json(final_text), error = function(e) NULL)
   if (is.null(parsed)) {
+    last_resp <- if (length(query_block) > 0) resp2 else resp1
+    message("WARN: fact-check parse failed; stop_reason=", last_resp$stop_reason %||% "NA",
+            "; text tail: ", str_sub(str_squish(final_text), -200))
     return(list(
       pass = FALSE,
       failed_claims = list("could not parse fact-check response"),

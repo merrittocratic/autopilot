@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Merrittocracy Autopilot -- Daily X Substack Note (5:00pm local, ET on the Mini)
+    2026-11-04 -- Initial version.
+
+    Drafts one Substack Note from the day's X cache and sends it to Telegram.
+    Secrets come from the Keychain via scripts/autopilot-env.sh; none live here.
+
+    Install (from the repo root on the Mac Mini):
+      sed -e "s|__REPO__|$PWD|g" -e "s|__HOME__|$HOME|g" \
+        deploy/launchd/com.merritt.autopilot.x-daily-note.plist \
+        > ~/Library/LaunchAgents/com.merritt.autopilot.x-daily-note.plist
+      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.merritt.autopilot.x-daily-note.plist
+
+    Verify:     launchctl print gui/$(id -u)/com.merritt.autopilot.x-daily-note
+    Test-fire:  launchctl kickstart gui/$(id -u)/com.merritt.autopilot.x-daily-note
+    Unload:     launchctl bootout gui/$(id -u)/com.merritt.autopilot.x-daily-note
+  -->
+
+  <key>Label</key>
+  <string>com.merritt.autopilot.x-daily-note</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO__/scripts/autopilot-env.sh</string>
+    <string>/opt/homebrew/bin/Rscript</string>
+    <string>__REPO__/openclaw-scripts/x-daily-note.R</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:__HOME__/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key>
+    <string>__HOME__</string>
+  </dict>
+
+  <!-- 17:00 in the Mini's local timezone (ET) -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>17</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- logs/ is tracked via logs/.gitkeep, so it exists on every checkout -->
+  <key>StandardOutPath</key>
+  <string>__REPO__/logs/launchd_x_daily_note_stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO__/logs/launchd_x_daily_note_stderr.log</string>
+
+  <key>KeepAlive</key>
+  <false/>
+</dict>
+</plist>

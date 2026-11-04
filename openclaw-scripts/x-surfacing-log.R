@@ -2,6 +2,11 @@
 # ============================================================================
 # x-surfacing-log.R -- append a surfacing record to JSONL log
 # ============================================================================
+# 2026-11-04 -- Accept an optional `options` array (prompts now return up
+#               to three registers: data / needle / verdict). Each element
+#               {"style": "...", "text": "...", "fact_check": "..."} is
+#               logged as-is so feedback can be joined back to the register
+#               Steve picked. `draft` stays for older callers.
 # 2026-09-18 -- Log tweet_text and which player each match type actually
 #               resolved to (prospect_name/veteran_name/cfb_name/golf_name),
 #               not just the match booleans. Without this the log can't
@@ -34,7 +39,9 @@
 #     "candidate":   { ...full x-monitor.R candidate JSON... },
 #     "draft":       "the drafted reply text",
 #     "message_id":  7891,
-#     "fact_check":  "passed"   # optional, Tier-2 only -- see x-fact-check.R
+#     "fact_check":  "passed",  # optional -- see x-fact-check.R
+#     "options":     [ {"style": "data", "text": "...", "fact_check": "passed"}, ... ]
+#                                 # optional, 2026-11-04
 #   }
 # ============================================================================
 
@@ -57,6 +64,7 @@ candidate  <- input$candidate
 draft      <- input$draft %||% "(no draft generated)"
 message_id <- input$message_id %||% NA
 fact_check <- input$fact_check %||% NA_character_
+options    <- input$options %||% list()
 
 if (is.null(candidate) || is.null(candidate$tweet_id)) {
   stop("Input missing required candidate.tweet_id field")
@@ -90,7 +98,8 @@ entry <- list(
   golf_name          = candidate$golf_name %||% NA_character_,
   draft              = draft,
   message_id         = message_id,
-  fact_check         = fact_check
+  fact_check         = fact_check,
+  options            = options
 )
 
 dir.create(dirname(SURFACING_LOG), showWarnings = FALSE, recursive = TRUE)
