@@ -2,6 +2,10 @@
 # ============================================================================
 # x-length-check.R -- deterministic character-budget gate for drafted replies
 # ============================================================================
+# 2026-11-04b -- Banned stock-phrase gate ("Funny how", "Imagine thinking",
+#               ...). The prompts ban them, but drafts still produced them
+#               in testing. A hit sets banned_phrase and fails length_ok,
+#               so callers that already drop on length_ok drop these too.
 # 2026-11-04 -- Ceiling 240 -> 320 and short-draft flag 200 -> 40, matching
 #               the rewritten prompts (one-liners are now a wanted option,
 #               not a defect). New has_placeholder / placeholders fields:
@@ -28,7 +32,10 @@
 #
 #   stdout (single JSON document):
 #     {
-#       "length_ok":      true|false,   # FALSE only when over MAX_CHARS
+#       "length_ok":      true|false,   # FALSE when over MAX_CHARS or a
+#                                       # banned phrase hit (name kept for
+#                                       # caller compatibility)
+#       "banned_phrase":  null,         # the stock phrase matched, if any
 #       "char_count":     172,
 #       "max_chars":      320,
 #       "over_by":        0,            # chars over MAX_CHARS, 0 if length_ok
@@ -64,6 +71,11 @@ MAX_CHARS           <- 320   # hard ceiling, matches every x_reply_tier_*.md
 NOTABLY_SHORT_CHARS <- 40    # informational only, never fails the gate;
                               # one-liners are a wanted register now
 PLACEHOLDER_REGEX   <- "\\[STAT:[^\\]]*\\]"
+# Must stay in sync with the "Stock frames" bullet in prompts/x_reply_tier_*.md.
+BANNED_PHRASES <- c(
+  "funny how", "imagine thinking", "make it make sense",
+  "tell me .{1,60} without telling me", "not the flex"
+)
 
 input <- tryCatch(
   jsonlite::fromJSON(file("stdin"), simplifyVector = FALSE),
@@ -76,19 +88,24 @@ if (!nzchar(str_trim(draft)) || identical(str_trim(draft), "SKIP")) {
   cat(toJSON(list(
     length_ok = TRUE, char_count = 0, max_chars = MAX_CHARS, over_by = 0,
     notably_short = FALSE, has_placeholder = FALSE, placeholders = list(),
+    banned_phrase = NA,
     notes = "Empty or SKIP draft -- nothing to check"
-  ), auto_unbox = TRUE))
+  ), auto_unbox = TRUE, na = "null"))
   quit(save = "no")
 }
 
 char_count <- nchar(draft, type = "chars")
 over_by    <- max(0, char_count - MAX_CHARS)
-length_ok  <- over_by == 0
-notably_short <- length_ok && char_count < NOTABLY_SHORT_CHARS
+banned_hit <- BANNED_PHRASES[str_detect(str_to_lower(draft), BANNED_PHRASES)]
+banned_phrase <- if (length(banned_hit) > 0) banned_hit[[1]] else NULL
+length_ok  <- over_by == 0 && is.null(banned_phrase)
+notably_short <- over_by == 0 && char_count < NOTABLY_SHORT_CHARS
 placeholders  <- str_extract_all(draft, PLACEHOLDER_REGEX)[[1]]
 has_placeholder <- length(placeholders) > 0
 
-notes <- if (!length_ok) {
+notes <- if (!is.null(banned_phrase)) {
+  sprintf("Draft uses a banned stock phrase (%s) -- drop this option.", banned_phrase)
+} else if (!length_ok) {
   sprintf("Draft is %d characters, %d over the %d-character ceiling -- reject, retry, or truncate before surfacing.",
           char_count, over_by, MAX_CHARS)
 } else if (notably_short) {
@@ -102,5 +119,6 @@ cat(toJSON(list(
   length_ok = length_ok, char_count = char_count, max_chars = MAX_CHARS,
   over_by = over_by, notably_short = notably_short,
   has_placeholder = has_placeholder, placeholders = as.list(placeholders),
+  banned_phrase = banned_phrase %||% NA,
   notes = if (has_placeholder) paste(notes, "Contains [STAT: ...] placeholder(s) -- Steve fills before posting; never auto-post.") else notes
-), auto_unbox = TRUE))
+), auto_unbox = TRUE, na = "null"))

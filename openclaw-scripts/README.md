@@ -66,11 +66,15 @@ summary only, no API call, no send), `--no-send` (draft + file, skip
 Telegram). Manual run with secrets:
 `scripts/autopilot-env.sh /opt/homebrew/bin/Rscript openclaw-scripts/x-daily-note.R --no-send`
 
-### Reply drafting (2026-11-04 rewrite)
-`prompts/x_reply_tier_*.md` return up to three options per candidate, one
-per register, as lines starting `OPTION 1 (data):`, `OPTION 2 (needle):`,
-`OPTION 3 (verdict):`, or the single word `SKIP`. Placeholders filled by
-Earnest's drafting step: `{reply_voice_sample}` (verbatim contents of
+### Reply drafting (2026-11-04 rewrite, revised 2026-11-04b)
+`prompts/x_reply_tier_*.md` return up to three options per candidate, as
+lines starting `OPTION <n> (<style>):` with style `data`, `needle` or
+`verdict` (styles may repeat), or the single word `SKIP`. The drafting
+call carries the `web_search_20250305` tool (`max_uses: 2`); join all
+text blocks before parsing, since citations split them. Placeholders
+filled by Earnest's drafting step: `{steve_positions}` (verbatim contents
+of `prompts/steve_positions.md`, which Steve edits),
+`{reply_voice_sample}` (verbatim contents of
 `data/voice-sample/reply_voice_sample.txt`; replaces `{voice_sample}`),
 `{username}`, `{tweet_text}`, `{model_data}` (empty string when absent,
 never "null"), `{article_summary}`. Everything above each prompt's
@@ -90,7 +94,9 @@ set changes (cache-friendly). Needs X creds: run via
 
 ### `x-length-check.R`
 Character-budget gate, once per option. Ceiling 320 (was 240). Reports
-`has_placeholder` / `placeholders` for `[STAT: ...]` slots.
+`has_placeholder` / `placeholders` for `[STAT: ...]` slots. Also rejects
+banned stock phrases ("Funny how", ...): `banned_phrase` is set and
+`length_ok` is false.
 
 ### `x-fact-check.R` / `x-fact-check.sh`
 Post-draft verification gate, **all tiers, once per option** since
