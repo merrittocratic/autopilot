@@ -88,7 +88,9 @@ Weekly (launchd, `deploy/launchd/com.merritt.autopilot.reply-voice-sample.plist`
 Mondays 6am ET). Pulls @Merrittocratic's last ~200 posts via the X API,
 keeps hand-written replies, and writes the top 25 by engagement as
 "They posted / Steve replied" pairs to
-`data/voice-sample/reply_voice_sample.txt`. Rewrites only when the selected
+`data/voice-sample/reply_voice_sample.txt`. Also writes his 10 most recent
+original posts to `data/voice-sample/note_voice_sample.txt`, the voice
+target for `x-daily-note.R`. Rewrites only when the selected
 set changes (cache-friendly). Needs X creds: run via
 `scripts/autopilot-env.sh`. `--dry-run` prints without writing.
 

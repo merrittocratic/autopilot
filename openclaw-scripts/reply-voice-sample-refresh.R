@@ -3,6 +3,10 @@
 # reply-voice-sample-refresh.R -- cache Steve's best hand-written X replies
 # as few-shot voice examples for the reply-draft prompts
 # ============================================================================
+# 2026-11-04b -- Also writes note_voice_sample.txt: Steve's most recent
+#               original short-form posts (not replies), the voice target
+#               for x-daily-note.R. The first daily note read like a news
+#               recap in Substack-explainer voice.
 # 2026-11-04 -- Initial version. The 2026-11-04 reply review found the
 #               drafts copied the explainer register of the Substack
 #               excerpts in voice_sample.txt ("Stat Nerd alert!"), while
@@ -45,6 +49,10 @@ AUTOPILOT     <- file.path(HOME_DIR, "autopilot")
 OUT_DIR       <- file.path(AUTOPILOT, "data", "voice-sample")
 OUT_FILE      <- file.path(OUT_DIR, "reply_voice_sample.txt")
 MANIFEST_PATH <- file.path(OUT_DIR, "reply_manifest.json")
+NOTE_FILE     <- file.path(OUT_DIR, "note_voice_sample.txt")
+NOTE_MANIFEST <- file.path(OUT_DIR, "note_manifest.json")
+N_NOTES       <- 10    # original posts; recency, not engagement (counts are tiny)
+MIN_NOTE_CHR  <- 100   # skips one-line asides
 
 N_EXAMPLES    <- 25    # enough range across registers, small enough to read
 MAX_PAGES     <- 2     # 100 posts per page
@@ -140,19 +148,55 @@ build_examples <- function(fetched) {
   bind_rows(rows)
 }
 
+# Original posts: no replied_to reference and not opening with an @mention.
+# Engagement on these is too thin to rank by, so take the most recent.
+build_notes <- function(fetched) {
+  rows <- map(fetched$posts, function(p) {
+    refs <- map_chr(p$referenced_tweets %||% list(), "type")
+    if ("replied_to" %in% refs || str_detect(p$text, "^@")) return(NULL)
+    tibble(tweet_id = p$id, text = clean_text(p$text))
+  })
+  bind_rows(rows) |>
+    filter(nchar(text) >= MIN_NOTE_CHR) |>
+    arrange(desc(tweet_id)) |>
+    slice_head(n = N_NOTES)
+}
+
+# Hash-gated so the file (part of a cached prompt prefix) only changes
+# when its content does.
+write_if_changed <- function(text, out_file, manifest_path, ids, n_seen) {
+  hash <- digest(text, algo = "sha256")
+  previous <- tryCatch(fromJSON(manifest_path, simplifyVector = FALSE), error = function(e) NULL)
+  if (!is.null(previous) && identical(previous$content_hash, hash) && file.exists(out_file)) {
+    cli_alert_info("{basename(out_file)} unchanged -- left as-is (no cache-breaking rewrite)")
+    return(invisible(FALSE))
+  }
+  writeLines(text, out_file)
+  write(toJSON(list(
+    generated_at   = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    content_hash   = hash,
+    n_examples     = length(ids),
+    n_seen         = n_seen,
+    tweet_ids      = ids
+  ), auto_unbox = TRUE, pretty = TRUE), manifest_path)
+  cli_alert_success("{out_file} rewritten ({length(ids)} examples)")
+  invisible(TRUE)
+}
+
 # --- Main --------------------------------------------------------------------
 cli_h1("Reply voice sample refresh")
 
 fetched  <- fetch_own_posts(build_token())
 examples <- build_examples(fetched)
+notes    <- build_notes(fetched)
+note_text <- paste(notes$text, collapse = "\n\n")
 if (nrow(examples) == 0) {
   cli_alert_warning("No replies found -- leaving any existing {basename(OUT_FILE)} untouched")
-  quit(save = "no")
 }
 
 # Replies-to-Steve count most: a reply that starts an argument is the
 # behavior we want the drafts to copy.
-selected <- examples |>
+selected <- if (nrow(examples) == 0) tibble(tweet_id = character(0)) else examples |>
   filter(nchar(reply_text) >= MIN_REPLY_CHR) |>
   mutate(score = likes + 3 * replies + 2 * retweets + impressions / 1000) |>
   slice_max(score, n = N_EXAMPLES, with_ties = FALSE) |>
@@ -163,28 +207,19 @@ blocks <- glue_data(
   "They posted (@{parent_user}): {parent_text}\nSteve replied: {reply_text}"
 )
 candidate_text <- paste(blocks, collapse = "\n\n")
-candidate_hash <- digest(candidate_text, algo = "sha256")
 
 if (DRY_RUN) {
-  cat(candidate_text, "\n")
-  cli_alert_info("Dry run: {nrow(selected)} examples, {nchar(candidate_text)} chars, not written")
+  cat(candidate_text, "\n\n--- note voice sample ---\n", note_text, "\n")
+  cli_alert_info("Dry run: {nrow(selected)} replies, {nrow(notes)} notes, not written")
   quit(save = "no")
 }
 
 dir.create(OUT_DIR, showWarnings = FALSE, recursive = TRUE)
-previous <- tryCatch(fromJSON(MANIFEST_PATH, simplifyVector = FALSE), error = function(e) NULL)
-if (!is.null(previous) && identical(previous$content_hash, candidate_hash) && file.exists(OUT_FILE)) {
-  cli_alert_info("Selected replies unchanged -- {basename(OUT_FILE)} left as-is (no cache-breaking rewrite)")
-  quit(save = "no")
+if (nrow(selected) > 0) {
+  write_if_changed(candidate_text, OUT_FILE, MANIFEST_PATH, selected$tweet_id, nrow(examples))
 }
-
-writeLines(candidate_text, OUT_FILE)
-write(toJSON(list(
-  generated_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-  content_hash = candidate_hash,
-  n_examples   = nrow(selected),
-  n_replies_seen = nrow(examples),
-  tweet_ids    = selected$tweet_id
-), auto_unbox = TRUE, pretty = TRUE), MANIFEST_PATH)
-
-cli_alert_success("{OUT_FILE} rewritten ({nrow(selected)} examples)")
+if (nrow(notes) > 0) {
+  write_if_changed(note_text, NOTE_FILE, NOTE_MANIFEST, notes$tweet_id, nrow(notes))
+} else {
+  cli_alert_warning("No original posts found -- leaving any existing {basename(NOTE_FILE)} untouched")
+}

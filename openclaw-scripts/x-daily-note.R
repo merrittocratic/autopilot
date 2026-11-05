@@ -3,6 +3,11 @@
 # x-daily-note.R -- 5pm ET roundup of the day's X conversation, drafted as
 # one Substack Note for Steve to edit.
 # ============================================================================
+# 2026-11-04b -- Voice and facts: uses note_voice_sample.txt (Steve's own
+#               short-form posts) and prompts/steve_positions.md, and gives
+#               the model web_search (max 3) so numbers get looked up instead
+#               of left as [STAT]. Joins all text blocks (citations split
+#               them), drops any pre-answer narration, and resumes pause_turn.
 # 2026-11-04 -- Scheduled by launchd (deploy/launchd/), not openclaw cron;
 #               sends its own plain Telegram message (no buttons, no polling).
 # 2026-11-04 -- Initial version.
@@ -45,7 +50,9 @@ AUTOPILOT     <- file.path(HOME_DIR, "autopilot")
 CACHE_DIR     <- file.path(AUTOPILOT, "data", "x-daily-cache")
 SURFACING_LOG <- file.path(AUTOPILOT, "data", "x-monitor-surfacings.jsonl")
 FEEDBACK_LOG  <- file.path(AUTOPILOT, "data", "x-monitor-feedback.jsonl")
-VOICE_SAMPLE  <- file.path(AUTOPILOT, "data", "voice-sample", "voice_sample.txt")
+NOTE_VOICE    <- file.path(AUTOPILOT, "data", "voice-sample", "note_voice_sample.txt")
+VOICE_SAMPLE  <- file.path(AUTOPILOT, "data", "voice-sample", "voice_sample.txt")  # fallback
+POSITIONS     <- file.path(AUTOPILOT, "prompts", "steve_positions.md")
 SYSTEM_PROMPT <- file.path(AUTOPILOT, "prompts", "substack_note_daily_system.md")
 NOTES_DIR     <- file.path(AUTOPILOT, "staging", "notes")
 
@@ -57,6 +64,10 @@ MODEL       <- "claude-opus-5-5"
 EFFORT      <- "high"
 MAX_TOKENS  <- 16000
 NO_NOTE     <- "NO_NOTE_TODAY"
+# Basic web search, not _20260209: in reply-drafting tests the dynamic-
+# filtering version mostly skipped searching.
+WEB_SEARCH  <- list(type = "web_search_20250305", name = "web_search", max_uses = 3)
+MAX_RESUMES <- 2   # pause_turn continuations
 
 TELEGRAM_CHAT_ID <- Sys.getenv("TELEGRAM_CHAT_ID", "8676616323")
 TELEGRAM_MAX     <- 4000  # Telegram caps a message at 4096 chars
@@ -143,45 +154,60 @@ call_claude <- function(system_text, user_text) {
   key <- Sys.getenv("ANTHROPIC_API_KEY")
   if (key == "") stop("ANTHROPIC_API_KEY is not set")
 
-  body <- list(
-    model         = MODEL,
-    max_tokens    = MAX_TOKENS,
-    output_config = list(effort = EFFORT),
-    # Re-routes to another model if a safety classifier declines, instead
-    # of returning an empty draft.
-    fallbacks     = "default",
-    system        = system_text,
-    messages      = list(list(role = "user", content = user_text))
-  )
-
-  resp <- POST(
-    "https://api.anthropic.com/v1/messages",
-    add_headers(
-      "x-api-key"         = key,
-      "anthropic-version" = "2023-06-01",
-      "anthropic-beta"    = "server-side-fallback-2026-07-01",
-      "content-type"      = "application/json"
-    ),
-    body   = toJSON(body, auto_unbox = TRUE),
-    encode = "raw",
-    timeout(300)
-  )
-
-  if (status_code(resp) != 200) {
-    stop(glue("Claude API error {status_code(resp)}: {content(resp, as = 'text', encoding = 'UTF-8')}"))
+  messages <- list(list(role = "user", content = user_text))
+  out <- NULL
+  for (attempt in 0:MAX_RESUMES) {
+    body <- list(
+      model         = MODEL,
+      max_tokens    = MAX_TOKENS,
+      output_config = list(effort = EFFORT),
+      # Re-routes to another model if a safety classifier declines, instead
+      # of returning an empty draft.
+      fallbacks     = "default",
+      system        = system_text,
+      tools         = list(WEB_SEARCH),
+      messages      = messages
+    )
+    resp <- POST(
+      "https://api.anthropic.com/v1/messages",
+      add_headers(
+        "x-api-key"         = key,
+        "anthropic-version" = "2023-06-01",
+        "anthropic-beta"    = "server-side-fallback-2026-07-01",
+        "content-type"      = "application/json"
+      ),
+      body   = toJSON(body, auto_unbox = TRUE, null = "null"),
+      encode = "raw",
+      timeout(600)
+    )
+    if (status_code(resp) != 200) {
+      stop(glue("Claude API error {status_code(resp)}: {content(resp, as = 'text', encoding = 'UTF-8')}"))
+    }
+    out <- content(resp)
+    if (identical(out$stop_reason, "refusal")) {
+      stop(glue("Claude declined the request (category: {out$stop_details$category %||% 'unknown'})"))
+    }
+    # The server-side search loop can pause; re-send the assistant turn
+    # as-is and it resumes.
+    if (!identical(out$stop_reason, "pause_turn")) break
+    messages <- c(messages, list(list(role = "assistant", content = out$content)))
   }
-  out <- content(resp)
-  if (identical(out$stop_reason, "refusal")) {
-    stop(glue("Claude declined the request (category: {out$stop_details$category %||% 'unknown'})"))
-  }
-  # Response can include thinking blocks; only text blocks are the draft.
-  text <- out$content |>
-    keep(~ identical(.x$type, "text")) |>
-    map_chr(~ .x$text) |>
-    paste(collapse = "\n")
+  if (identical(out$stop_reason, "pause_turn")) message("WARN: still pause_turn after resumes")
   if (identical(out$stop_reason, "max_tokens")) {
     message("WARN: response hit max_tokens; draft may be truncated")
   }
+  searches <- out$usage$server_tool_use$web_search_requests %||% 0
+  message(glue("usage: in={out$usage$input_tokens} out={out$usage$output_tokens} searches={searches}"))
+
+  # Only text blocks are the draft. Citations split one answer across many
+  # blocks, so join with "" -- a newline would break sentences apart.
+  text <- out$content |>
+    keep(~ identical(.x$type, "text")) |>
+    map_chr(~ .x$text) |>
+    paste(collapse = "")
+  # Drop any narration before the answer ("Let me check...").
+  start <- str_locate(text, "## Draft note|NO_NOTE_TODAY")[1, "start"]
+  if (!is.na(start)) text <- str_sub(text, start)
   str_trim(text)
 }
 
@@ -262,10 +288,13 @@ if (DRY_RUN) {
 }
 
 # --- Draft -------------------------------------------------------------------
-voice_sample <- if (file.exists(VOICE_SAMPLE)) {
-  paste(readLines(VOICE_SAMPLE, warn = FALSE), collapse = "\n")
-} else {
-  ""
+read_text <- function(path) {
+  if (file.exists(path)) paste(readLines(path, warn = FALSE), collapse = "\n") else ""
+}
+voice_sample <- read_text(NOTE_VOICE)
+if (!nzchar(voice_sample)) {
+  message("WARN: ", basename(NOTE_VOICE), " missing; falling back to ", basename(VOICE_SAMPLE))
+  voice_sample <- read_text(VOICE_SAMPLE)
 }
 
 payload <- list(
@@ -275,7 +304,8 @@ payload <- list(
               likes, retweets, replies, url, relevance_score,
               prospect_match, veteran_match, cfb_match, golf_match,
               matched_article_slug, surfaced, feedback),
-  voice_sample = voice_sample
+  steve_positions = read_text(POSITIONS),
+  voice_sample    = voice_sample
 )
 
 system_text <- paste(readLines(SYSTEM_PROMPT, warn = FALSE), collapse = "\n")

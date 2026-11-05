@@ -65,6 +65,18 @@ right after pulling.
    candidate with its options.
 6. **Journal:** add a dated note under the new W45 entry's Verification.
 
+## Daily note (same pull)
+
+`x-daily-note.R` and `prompts/substack_note_daily_system.md` also changed.
+The note now uses Steve's own short posts as its voice sample, inserts
+`steve_positions.md`, and has web search (up to 3 searches). It's a
+launchd job, so there's nothing to rewire. One step: after pulling, run
+`launchctl kickstart gui/$(id -u)/com.merritt.autopilot.reply-voice-sample`
+once so `data/voice-sample/note_voice_sample.txt` exists before 5pm.
+Until it does, the note falls back to the old Substack excerpts and logs
+a WARN. Check `logs/launchd_x_daily_note_stderr.log` after the 5pm run
+for a `usage: ... searches=N` line.
+
 ## Cost
 
 With search on, each drafted candidate is about 30K input tokens, mostly
