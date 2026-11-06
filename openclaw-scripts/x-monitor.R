@@ -539,6 +539,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("nfl north divisions", "nfc north", "afc north", "minnesota vikings", "kyler murray", "j.j. mccarthy", "new york giants", "net epa", "offensive efficiency", "defensive efficiency", "red zone touchdown rate", "passer rating", "divisional record", "strength of schedule", "sack rate"),
     summary = "North divisions' dominant records mask weak schedules; Vikings' offense struggles despite 6-0 start."
   )
+,
+  list(
+    slug = "were-not-in-kansas-anymore",
+    keywords = c("college football playoff", "transfer portal", "recruiting talent composite", "parity in college football", "vikings 6-0", "utah cfp rankings", "indiana football", "byu football", "point spread", "ap poll", "roster talent gap", "247sports", "nfc south", "college football nfl comparison", "fbs teams"),
+    summary = "College football is developing NFL-like parity as talent spreads across rosters despite lacking draft/salary cap constraints."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
