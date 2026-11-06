@@ -308,9 +308,10 @@ check_once <- function(draft, tweet_text, model_fields_text) {
   if (is.null(resp1)) {
     return(list(
       pass = FALSE,
+      api_error = TRUE,
       failed_claims = list("fact-check API call failed"),
       stripped_draft = NULL,
-      notes = "API error -- treated as unverifiable"
+      notes = "API error -- passed through as skipped_no_claims"
     ))
   }
 
@@ -345,9 +346,10 @@ check_once <- function(draft, tweet_text, model_fields_text) {
             "; text tail: ", str_sub(str_squish(final_text), -200))
     return(list(
       pass = FALSE,
+      api_error = TRUE,
       failed_claims = list("could not parse fact-check response"),
       stripped_draft = NULL,
-      notes = "parse error -- treated as unverifiable"
+      notes = "parse error -- passed through as skipped_no_claims"
     ))
   }
   parsed
@@ -361,6 +363,13 @@ run_fact_check <- function(draft, tweet_text, candidate, allow_retry = TRUE) {
 
   model_fields_text <- extract_model_fields(candidate)
   result <- check_once(draft, tweet_text, model_fields_text)
+
+  # API/parse errors are transient infrastructure failures, not content failures.
+  # Pass the draft through rather than silently dropping the candidate.
+  if (isTRUE(result$api_error)) {
+    message("WARN: fact-check API/parse error; passing candidate through as skipped_no_claims: ", result$notes)
+    return(list(fact_check = "skipped_no_claims", draft = draft, failed_claims = result$failed_claims, notes = result$notes))
+  }
 
   if (isTRUE(result$pass)) {
     return(list(fact_check = "passed", draft = draft, failed_claims = list(), notes = result$notes %||% ""))
@@ -403,9 +412,9 @@ if (!nzchar(str_trim(draft)) || identical(str_trim(draft), "SKIP")) {
 result <- tryCatch(
   run_fact_check(draft, tweet_text, candidate),
   error = function(e) list(
-    fact_check = "failed_skipped", draft = NULL,
+    fact_check = "skipped_no_claims", draft = draft,
     failed_claims = list(glue("fact-check error: {e$message}")),
-    notes = "Unhandled error -- treated as unverifiable"
+    notes = "Unhandled error -- passed through as skipped_no_claims"
   )
 )
 
