@@ -545,6 +545,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("college football playoff", "transfer portal", "recruiting talent composite", "parity in college football", "vikings 6-0", "utah cfp rankings", "indiana football", "byu football", "point spread", "ap poll", "roster talent gap", "247sports", "nfc south", "college football nfl comparison", "fbs teams"),
     summary = "College football is developing NFL-like parity as talent spreads across rosters despite lacking draft/salary cap constraints."
   )
+,
+  list(
+    slug = "life-is-a-game-of-inches",
+    keywords = c("ohio state buckeyes", "oregon ducks", "win probability", "game of inches", "dylan raiola", "jay timmons interception", "jaylen mcclain", "dierre hill jr.", "playoff implications", "critical plays", "game momentum", "second half collapse", "turnovers", "miami football", "lsu vs alabama"),
+    summary = "Critical plays, not final scores, decide close games—small moments determine everything."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
