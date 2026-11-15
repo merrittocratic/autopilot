@@ -551,6 +551,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("ohio state buckeyes", "oregon ducks", "win probability", "game of inches", "dylan raiola", "jay timmons interception", "jaylen mcclain", "dierre hill jr.", "playoff implications", "critical plays", "game momentum", "second half collapse", "turnovers", "miami football", "lsu vs alabama"),
     summary = "Critical plays, not final scores, decide close games—small moments determine everything."
   )
+,
+  list(
+    slug = "everything-must-go",
+    keywords = c("trade deadline", "jacksonville jaguars", "jordan davis", "davon godchaux", "jessie bates iii", "chicago bears", "san francisco 49ers", "keenan allen", "deforest buckner", "epa per play", "defensive trades", "turnover margin", "rushing yards allowed", "tony pollard", "mike evans"),
+    summary = "Trade deadline deals show spending doesn't guarantee results; value depends on filling specific roster holes."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
