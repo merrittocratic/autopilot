@@ -557,6 +557,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("trade deadline", "jacksonville jaguars", "jordan davis", "davon godchaux", "jessie bates iii", "chicago bears", "san francisco 49ers", "keenan allen", "deforest buckner", "epa per play", "defensive trades", "turnover margin", "rushing yards allowed", "tony pollard", "mike evans"),
     summary = "Trade deadline deals show spending doesn't guarantee results; value depends on filling specific roster holes."
   )
+,
+  list(
+    slug = "round-up-the-usual-suspects",
+    keywords = c("ohio state", "oregon", "cfb playoff committee", "alabama", "tennessee", "georgia", "utah", "kentucky", "head-to-head loss", "sp+", "fpi", "epa per play", "sec bias", "playoff rankings", "8-2 record"),
+    summary = "CFB playoff committee appears to show SEC bias by ranking Alabama 3rd over Tennessee despite head-to-head loss with same record."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
