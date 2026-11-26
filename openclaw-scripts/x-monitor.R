@@ -563,6 +563,12 @@ ARTICLE_TOPICS <- list(
     keywords = c("ohio state", "oregon", "cfb playoff committee", "alabama", "tennessee", "georgia", "utah", "kentucky", "head-to-head loss", "sp+", "fpi", "epa per play", "sec bias", "playoff rankings", "8-2 record"),
     summary = "CFB playoff committee appears to show SEC bias by ranking Alabama 3rd over Tennessee despite head-to-head loss with same record."
   )
+,
+  list(
+    slug = "heres-the-deal-im-the-best-there",
+    keywords = c("nfl division leaders", "kansas city chiefs", "denver broncos", "chicago bears", "detroit lions", "san francisco 49ers", "tiebreaker rules", "common games record", "point differential", "division record", "8-2 record", "chiefs vs broncos", "nfc north", "afc west", "playoff seeding"),
+    summary = "Analysis of NFL division leaders using tiebreaker rules, ranking the top six plus underrated teams like Bears and Rams."
+  )
 )
 
 # Keywords that trigger HARD SKIP (no race, no politics)
